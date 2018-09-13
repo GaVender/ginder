@@ -5,10 +5,9 @@ owners:
 - name: Vender
   email: venderhoom@163.com
   homepage: https://github.com/GaVender
-# 导入包
+ignore:
+- golang.org/x/sys/unix
 import:
-# glide up 会要求 fetch golang.org/x/sys/unix，无法通过转换 github，也无法设置 mirror 到本地，
-# 只能在 /root/.glide/cache/src/https-golang.org-x-sys-unix 加上该目录，目录里是代码，
-# 其实这个相当于 glide 的缓存，假如 version 没改变的话应该都是从这里拉取到项目本地，
-# 同时也不会因为事先把 golang.org/x/sys 放在项目本地而无法更新其他 package，glide up 会自动跳过
 - package: github.com/gin-gonic/gin
+- package: github.com/jmoiron/sqlx
+- package: github.com/golang/sys

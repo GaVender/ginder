@@ -1,5 +1,5 @@
-hash: d47d054bc5e7d35f8e8af0f876e37e74cc7ab6a322eac26a2037ad09830c5513
-updated: 2018-09-13T15:17:07.948991699+08:00
+hash: 39fbcaea88bf3531b6d3032a9ec3381d2d9c45f4f1e6051f12da0399b1042409
+updated: 2018-09-13T17:54:02.856314999+08:00
 imports:
 - name: github.com/gin-contrib/sse
   version: 22d885f9ecc78bf4ee5d72b937e4bbcdc58e8cae
@@ -13,6 +13,10 @@ imports:
   version: 0f2620f554cf5c8e281a2eb655a035f5a0f6dc90
   subpackages:
   - proto
+- name: github.com/golang/sys
+  version: d0be0721c37eeb5299f245a996a483160fc36940
+- name: github.com/jmoiron/sqlx
+  version: 0dae4fefe7c0e190f7b5a78dac28a1c82cc8d849
 - name: github.com/json-iterator/go
   version: 1624edc4454b8682399def8740d46db5e4362ba4
 - name: github.com/mattn/go-isatty
