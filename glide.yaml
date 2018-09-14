@@ -12,3 +12,4 @@ import:
 - package: github.com/jmoiron/sqlx
 - package: github.com/golang/sys
 - package: gopkg.in/redis.v5
+- package: github.com/jeanphorn/log4go

@@ -1,13 +1,13 @@
 package main
 
-import "github.com/gin-gonic/gin"
+import (
+	log "github.com/jeanphorn/log4go"
+)
 
 func main() {
-	r := gin.Default()
-	r.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"message": "pong",
-		})
-	})
-	r.Run() // listen and serve on 0.0.0.0:8080
+	log.LoadConfiguration("./log/log_config.json")
+
+	log.LOGGER("Test").Info("category Test info test message: %s", "new test msg")
+
+	log.Close()
 }
