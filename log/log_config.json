@@ -4,7 +4,7 @@
     "level": "FINE"
   },
   "files": [{
-    "enable": true,
+    "enable": false,
     "level": "DEBUG",
     "filename":"test.log",
     "category": "Test",
@@ -21,7 +21,7 @@
     "daily": true
   }],
   "sockets": [{
-    "enable": true,
+    "enable": false,
     "level": "DEBUG",
     "category": "TestSocket",
     "pattern": "[%D %T] [%C] [%L] (%S) %M",
