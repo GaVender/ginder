@@ -1,9 +1,20 @@
 package main
 
 import (
-	"ginder/route"
+	"ginder/routers"
+	"ginder/conf"
+	"os"
 )
 
 func main() {
-	route.Router.Run()
+	startConf()
+	routers.Router.Run()
+}
+
+func startConf() {
+	if "dev" == os.Getenv("env") {
+		conf.DevStart()
+	} else {
+		conf.ProStart()
+	}
 }

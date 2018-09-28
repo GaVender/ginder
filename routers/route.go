@@ -1,8 +1,8 @@
-package route
+package routers
 
 import (
 	"github.com/gin-gonic/gin"
-	"ginder/api/http"
+	"ginder/controllers/http"
 )
 
 // 过滤器
