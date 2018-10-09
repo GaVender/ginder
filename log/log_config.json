@@ -13,7 +13,17 @@
     "enable": true,
     "level": "DEBUG",
     "filename":"rotate_test.log",
-    "category": "TestRotate",
+    "category": "LogicLog",
+    "pattern": "[%D %T] [%C] [%L] (%S) %M",
+    "rotate": true,
+    "maxsize": "500M",
+    "maxlines": "10K",
+    "daily": true
+  },{
+    "enable": true,
+    "level": "DEBUG",
+    "filename":"rotate_test.log",
+    "category": "ErrorLog",
     "pattern": "[%D %T] [%C] [%L] (%S) %M",
     "rotate": true,
     "maxsize": "500M",

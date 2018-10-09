@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"time"
+	"path/filepath"
 )
 
 // This log writer sends output to a file
@@ -183,6 +184,11 @@ func (w *FileLogWriter) intRotate() error {
 	}
 
 	// Open the log file
+	err := checkDir(w.filename)
+	if err != nil {
+		return err
+	}
+
 	fd, err := os.OpenFile(w.filename, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0660)
 	if err != nil {
 		return err
@@ -198,6 +204,21 @@ func (w *FileLogWriter) intRotate() error {
 	// initialize rotation values
 	w.maxlines_curlines = 0
 	w.maxsize_cursize = 0
+
+	return nil
+}
+
+func checkDir(file string) error {
+	dir, _ := filepath.Split(file)
+	_, err := os.Stat(dir)
+
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return err
+		} else {
+			return os.MkdirAll(dir, os.ModePerm)
+		}
+	}
 
 	return nil
 }
