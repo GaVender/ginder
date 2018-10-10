@@ -17,6 +17,7 @@ func Home(c *gin.Context) {
 
 	if err != nil {
 		conf.LogicLogger.Error("mysql select error: %s", err.Error())
+		controllers.ThrowError(c, -1, err.Error())
 	}
 
 	r := controllers.SwitchResponse(0, u, "")

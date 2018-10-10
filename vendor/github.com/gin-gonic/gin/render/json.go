@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
-
+	"strconv"
 	"github.com/gin-gonic/gin/internal/json"
 )
 
@@ -58,6 +58,8 @@ func WriteJSON(w http.ResponseWriter, obj interface{}) error {
 	if err != nil {
 		return err
 	}
+
+	w.Header().Set("Content-Length", strconv.Itoa(len(jsonBytes)))
 	w.Write(jsonBytes)
 	return nil
 }
