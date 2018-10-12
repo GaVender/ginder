@@ -11,81 +11,81 @@ import (
 	"gopkg.in/redis.v5"
 )
 
-var MYSQL_MASTER_HOST string
-var MYSQL_SLAVE_HOST  string
-var MYSQL_PORT 	      string
-var MYSQL_USERNAME    string
-var MYSQL_PASSWORD	  string
-var MYSQL_DB		  string
-var REDIS_MASTER_HOST string
-var REDIS_SLAVE_HOST  string
-var REDIS_PORT		  string
-var REDIS_PASSWORD	  string
-var REDIS_DB		  int
-var REDIS_POOL_SIZE   int
-var LOG_FOR_ERROR	  string		// 放置非业务代码的错误的log
-var LOG_FOR_LOGIC	  string		// 放置代码逻辑错误、运行参数、结果等的log
-var ErrorLogger		  log4.Logger
-var LogicLogger		  log4.Logger
+var mysql_master_host string
+var mysql_slave_host  string
+var mysql_port 	      string
+var mysql_username    string
+var mysql_password	  string
+var mysql_db		  string
+var redis_master_host string
+var redis_slave_host  string
+var redis_port		  string
+var redis_password	  string
+var redis_db		  int
+var redis_pool_size   int
+var log_for_error	  string		// 放置非业务代码的错误的log
+var log_for_logic	  string		// 放置代码逻辑错误、运行参数、结果等的log
+var error_logger	  log4.Logger
+var logic_logger	  log4.Logger
 
 func init() {
-	LOG_FOR_ERROR = "/home/wwwlogs/php/ginder/php.log"
-	LOG_FOR_LOGIC = "/home/wwwlogs/ginder/php.log"
-	ErrorLogger = log4.NewDefaultLogger(log4.FINE)
-	LogicLogger = log4.NewDefaultLogger(log4.FINE)
-	ErrorLogger.AddFilter("file", log4.FINE, log4.NewFileLogWriter(LOG_FOR_ERROR, true, true))
-	LogicLogger.AddFilter("file", log4.FINE, log4.NewFileLogWriter(LOG_FOR_LOGIC, true, true))
+	log_for_error = "/home/wwwlogs/php/ginder/php.log"
+	log_for_logic = "/home/wwwlogs/ginder/php.log"
+	error_logger = log4.NewDefaultLogger(log4.FINE)
+	logic_logger = log4.NewDefaultLogger(log4.FINE)
+	error_logger.AddFilter("file", log4.FINE, log4.NewFileLogWriter(log_for_error, true, true))
+	logic_logger.AddFilter("file", log4.FINE, log4.NewFileLogWriter(log_for_logic, true, true))
 }
 
 func DevStart() {
-	MYSQL_MASTER_HOST = ""
-	MYSQL_SLAVE_HOST = ""
-	MYSQL_PORT = ""
-	MYSQL_USERNAME = ""
-	MYSQL_PASSWORD = ""
-	MYSQL_DB = "passport"
-	REDIS_MASTER_HOST = ""
-	REDIS_SLAVE_HOST = ""
-	REDIS_PORT = "6379"
-	REDIS_PASSWORD = ""
-	REDIS_DB = 0
-	REDIS_POOL_SIZE = 10
+	mysql_master_host = "120.25.93.207"
+	mysql_slave_host = "120.25.93.207"
+	mysql_port = "3306"
+	mysql_username = "root"
+	mysql_password = "Aa123456"
+	mysql_db = "passport"
+	redis_master_host = "127.0.0.1"
+	redis_slave_host = "127.0.0.1"
+	redis_port = "6379"
+	redis_password = ""
+	redis_db = 0
+	redis_pool_size = 10
 }
 
 func ProStart() {
-	MYSQL_MASTER_HOST = strings.TrimSpace(os.Getenv("MYSQL_ETC1_MASTER_HOST"))
-	MYSQL_SLAVE_HOST = strings.TrimSpace(os.Getenv("MYSQL_ETC1_SLAVE_HOST"))
-	MYSQL_PORT = strings.TrimSpace(os.Getenv("MYSQL_ETC1_PORT"))
-	MYSQL_USERNAME = strings.TrimSpace(os.Getenv("MYSQL_ETC1_USERNAME"))
-	MYSQL_PASSWORD = strings.TrimSpace(os.Getenv("MYSQL_ETC1_PASSWORD"))
-	MYSQL_DB = "passport"
-	REDIS_MASTER_HOST = strings.TrimSpace(os.Getenv("REDIS_MASTER_HOST"))
-	REDIS_SLAVE_HOST = strings.TrimSpace(os.Getenv("REDIS_SLAVE_HOST"))
-	REDIS_PORT = strings.TrimSpace(os.Getenv("REDIS_PORT"))
-	REDIS_PASSWORD = strings.TrimSpace(os.Getenv("REDIS_PASSWORD"))
-	REDIS_DB, _ = strconv.Atoi(os.Getenv("REDIS_DB"))
-	REDIS_POOL_SIZE, _ = strconv.Atoi(os.Getenv("REDIS_POOL_SIZE"))
+	mysql_master_host = strings.TrimSpace(os.Getenv("MYSQL_ETC1_MASTER_HOST"))
+	mysql_slave_host = strings.TrimSpace(os.Getenv("MYSQL_ETC1_SLAVE_HOST"))
+	mysql_port = strings.TrimSpace(os.Getenv("MYSQL_ETC1_PORT"))
+	mysql_username = strings.TrimSpace(os.Getenv("MYSQL_ETC1_USERNAME"))
+	mysql_password = strings.TrimSpace(os.Getenv("MYSQL_ETC1_PASSWORD"))
+	mysql_db = "passport"
+	redis_master_host = strings.TrimSpace(os.Getenv("redis_master_host"))
+	redis_slave_host = strings.TrimSpace(os.Getenv("redis_slave_host"))
+	redis_port = strings.TrimSpace(os.Getenv("redis_port"))
+	redis_password = strings.TrimSpace(os.Getenv("redis_password"))
+	redis_db, _ = strconv.Atoi(os.Getenv("redis_db"))
+	redis_pool_size, _ = strconv.Atoi(os.Getenv("redis_pool_size"))
 }
 
 func SqlMasterDb() *sqlx.DB {
-	dns := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8", MYSQL_USERNAME, MYSQL_PASSWORD,
-		MYSQL_MASTER_HOST, MYSQL_PORT, MYSQL_DB)
+	dns := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8", mysql_username, mysql_password,
+		mysql_master_host, mysql_port, mysql_db)
 	db, err := sqlx.Open("mysql", dns)
 
 	if err != nil {
-		ErrorLogger.Error("mysql connect error: %s", err.Error())
+		LoggerError().Error("mysql connect error: %s", err.Error())
 	}
 
 	return db
 }
 
 func SqlSlaveDb() *sqlx.DB {
-	dns := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8", MYSQL_USERNAME, MYSQL_PASSWORD,
-		MYSQL_SLAVE_HOST, MYSQL_PORT, MYSQL_DB)
+	dns := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8", mysql_username, mysql_password,
+		mysql_slave_host, mysql_port, mysql_db)
 	db, err := sqlx.Open("mysql", dns)
 
 	if err != nil {
-		ErrorLogger.Error("mysql connect error: %s", err.Error())
+		LoggerError().Error("mysql connect error: %s", err.Error())
 	}
 
 	return db
@@ -95,18 +95,16 @@ func redisFactory(name string) *redis.Client {
 	host := ""
 
 	if "master" == name {
-		host = REDIS_MASTER_HOST
+		host = redis_master_host
 	} else {
-		host = REDIS_SLAVE_HOST
+		host = redis_slave_host
 	}
 
-	address := fmt.Sprintf("%s:%s", host, REDIS_PORT)
-
 	return redis.NewClient(&redis.Options{
-		Addr:        address,
-		Password:    REDIS_PASSWORD,
-		DB:          REDIS_DB,
-		PoolSize:    REDIS_POOL_SIZE,
+		Addr:        fmt.Sprintf("%s:%s", host, redis_port),
+		Password:    redis_password,
+		DB:          redis_db,
+		PoolSize:    redis_pool_size,
 	})
 }
 
@@ -120,4 +118,12 @@ func RedisMaster() *redis.Client {
 
 func RedisSlave() *redis.Client {
 	return getRedis("slave")
+}
+
+func LoggerError() log4.Logger {
+	return error_logger
+}
+
+func LoggerLogic() log4.Logger {
+	return logic_logger
 }
