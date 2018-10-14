@@ -38,11 +38,11 @@ func init() {
 }
 
 func DevStart() {
-	mysql_master_host = "120.25.93.207"
-	mysql_slave_host = "120.25.93.207"
+	mysql_master_host = ""
+	mysql_slave_host = ""
 	mysql_port = "3306"
-	mysql_username = "root"
-	mysql_password = "Aa123456"
+	mysql_username = ""
+	mysql_password = ""
 	mysql_db = "passport"
 	redis_master_host = "127.0.0.1"
 	redis_slave_host = "127.0.0.1"
