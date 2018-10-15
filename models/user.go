@@ -12,7 +12,7 @@ import (
 const PWD_ENCRYPT_PREFIX = "linge"
 
 type User struct {
-	Id 			   int64 `db:"id" json:"id"`
+	Id 			   int64  `db:"id" json:"id"`
 	Username 	   string `db:"username" json:"username"`
 	Password 	   string `db:"password" json:"password"`
 	CreateTime 	   string `db:"create_time" json:"create_time"`
@@ -21,17 +21,19 @@ type User struct {
 	InviteCode 	   string `db:"invite_code" json:"invite_code"`
 }
 
+type UserInfoRedis struct {
+	Token 	 string `json:"token"`
+	Uid 	 int64  `json:"uid"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
 type UserLogin struct {
 	Username string
 	Password string
 }
 
-type UserInfoRedis struct {
-	Token 	 string
-	Uid 	 int64
-	Username string
-	Password string
-}
+
 
 func (u *UserLogin) IsExists() int8 {
 	db := conf.SqlSlaveDb()
@@ -64,6 +66,15 @@ func (u *UserLogin) Register() (sql.Result, error) {
 
 	query := "insert into passport.user(username, password) values(?, ?);"
 	return db.Exec(query, u.Username, u.EncryptPassword())
+}
+
+func (u *UserLogin) UserInfo() *User {
+	user := User{}
+
+	db := conf.SqlSlaveDb()
+	defer db.Close()
+	db.Get(&user, "select id, username, password from passport.user where username = ?", u.Username)
+	return &user
 }
 
 func (u *UserLogin) EncryptPassword() string {
