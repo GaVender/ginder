@@ -13,7 +13,7 @@ import (
 const (
 	TOKEN_USER__INFO_REDIS 	 = "string:token:user_info:"
 	USERNAME_USER_INFO_REDIS = "string:username:user_info:"
-	USER_INFO_REDIS_TIME 	 = time.Second * 60 * 60 * 24
+	USER_INFO_REDIS_TIME 	 = time.Second * 60 * 60 * 24 * 30
 )
 
 type UserInfoOutput struct {
