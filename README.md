@@ -7,6 +7,6 @@ mysql
 
 log
 
-mongodb （待）
+mongodb
 
 trace （待）
