@@ -36,49 +36,54 @@ var error_logger	  		log4.Logger
 var logic_logger	  		log4.Logger
 
 func init() {
-	log_for_error = "/home/wwwlogs/php/ginder/php.log"
-	log_for_logic = "/home/wwwlogs/ginder/php.log"
+	// 把相应配置在init做好，避免后面的多并发引起的资源启动等意外的情况
+
+	/*
+		配置变量
+	*/
+	start()
+
+	/*
+		设置好日志配置，一个是系统级别错误，一个是业务逻辑错误
+	*/
 	error_logger = log4.NewDefaultLogger(log4.FINE)
 	logic_logger = log4.NewDefaultLogger(log4.FINE)
 	error_logger.AddFilter("file", log4.FINE, log4.NewFileLogWriter(log_for_error, true, true))
 	logic_logger.AddFilter("file", log4.FINE, log4.NewFileLogWriter(log_for_logic, true, true))
+
+	/*
+		启动mysql、redis、mongo配置
+	*/
+	fmt.Println("mysql 主库启动......")
+	SqlMasterDb()
+	fmt.Println("mysql 从库启动......")
+	SqlSlaveDb()
+	fmt.Println("redis 主库启动......")
+	RedisMaster()
+	fmt.Println("redis 从库启动......")
+	RedisSlave()
+	fmt.Println("mongo 启动......")
+	MongoSession()
 }
 
-func DevStart() {
-	mysql_master_host = ""
-	mysql_slave_host = ""
-	mysql_port = "3306"
-	mysql_username = ""
-	mysql_password = ""
-	mysql_db = "passport"
-	redis_master_host = "127.0.0.1"
-	redis_slave_host = "127.0.0.1"
-	redis_port = "6379"
-	redis_password = ""
-	redis_db = 0
-	redis_pool_size = 10
-	mongo_host = []string{"127.0.0.1"}
-	mongo_port = "27017"
-	mongo_timeout = time.Second * 10
-	mongo_pool_limit = 10
-}
-
-func ProStart() {
-	mysql_master_host = strings.TrimSpace(os.Getenv("MYSQL_ETC1_MASTER_HOST"))
-	mysql_slave_host = strings.TrimSpace(os.Getenv("MYSQL_ETC1_SLAVE_HOST"))
-	mysql_port = strings.TrimSpace(os.Getenv("MYSQL_ETC1_PORT"))
-	mysql_username = strings.TrimSpace(os.Getenv("MYSQL_ETC1_USERNAME"))
-	mysql_password = strings.TrimSpace(os.Getenv("MYSQL_ETC1_PASSWORD"))
-	mysql_db = "passport"
-	redis_master_host = strings.TrimSpace(os.Getenv("redis_master_host"))
-	redis_slave_host = strings.TrimSpace(os.Getenv("redis_slave_host"))
-	redis_port = strings.TrimSpace(os.Getenv("redis_port"))
-	redis_password = strings.TrimSpace(os.Getenv("redis_password"))
-	redis_db, _ = strconv.Atoi(os.Getenv("redis_db"))
-	redis_pool_size, _ = strconv.Atoi(os.Getenv("redis_pool_size"))
-	mongo_host = []string{"127.0.0.1"}
-	mongo_port = strings.TrimSpace(os.Getenv("MONGO_PORT"))
-	mongo_timeout = time.Second * 2
+func start() {
+	log_for_error 		= strings.TrimSpace(os.Getenv("LOG_ERROR"))
+	log_for_logic 		= strings.TrimSpace(os.Getenv("LOG_LOGIC"))
+	mysql_master_host 	= strings.TrimSpace(os.Getenv("MYSQL_MASTER_HOST"))
+	mysql_slave_host 	= strings.TrimSpace(os.Getenv("MYSQL_SLAVE_HOST"))
+	mysql_port 			= strings.TrimSpace(os.Getenv("MYSQL_PORT"))
+	mysql_username 		= strings.TrimSpace(os.Getenv("MYSQL_USERNAME"))
+	mysql_password 		= strings.TrimSpace(os.Getenv("MYSQL_PASSWORD"))
+	mysql_db 			= strings.TrimSpace(os.Getenv("MYSQL_DB"))
+	redis_master_host 	= strings.TrimSpace(os.Getenv("REDIS_MASTER_HOST"))
+	redis_slave_host 	= strings.TrimSpace(os.Getenv("REDIS_SLAVE_HOST"))
+	redis_port 			= strings.TrimSpace(os.Getenv("REDIS_PORT"))
+	redis_password 		= strings.TrimSpace(os.Getenv("REDIS_PASSWORD"))
+	redis_db, _ 		= strconv.Atoi(os.Getenv("REDIS_DB"))
+	redis_pool_size, _ 	= strconv.Atoi(os.Getenv("REDIS_POOL_SIZE"))
+	mongo_host 			= []string{strings.TrimSpace(os.Getenv("MONGO_HOST"))}
+	mongo_port 			= strings.TrimSpace(os.Getenv("MONGO_PORT"))
+	mongo_timeout 		= time.Second * 2
 	mongo_pool_limit, _ = strconv.Atoi(os.Getenv("MONGO_POOL_LIMIT"))
 }
 

@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	TOKEN_USER__INFO_REDIS 	 = "string:token:user_info:"
+	TOKEN_USER_INFO_REDIS 	 = "string:token:user_info:"
 	USERNAME_USER_INFO_REDIS = "string:username:user_info:"
 	USER_INFO_REDIS_TIME 	 = time.Second * 60 * 60 * 24 * 30
 )
@@ -125,7 +125,7 @@ func GetUserInfoRedisDataByUsername(username string) *models.UserInfoRedis {
 func GetUserInfoRedisDataByToken(token string) *models.UserInfoRedis {
 	u := models.UserInfoRedis{}
 	redis := conf.RedisSlave()
-	ret := redis.Get(TOKEN_USER__INFO_REDIS + token)
+	ret := redis.Get(TOKEN_USER_INFO_REDIS + token)
 
 	if ret.Err() == nil {
 		json.Unmarshal([]byte(ret.Val()), &u)
@@ -148,7 +148,7 @@ func createUserInfoRedisData(token string, uid int64, u *models.UserLogin) *mode
 func saveUserInfoRedis(token string, username string, u *models.UserInfoRedis) {
 	uJson, _ := json.Marshal(*u)
 	redis := conf.RedisMaster()
-	redis.Set(TOKEN_USER__INFO_REDIS + token, string(uJson), USER_INFO_REDIS_TIME)
+	redis.Set(TOKEN_USER_INFO_REDIS + token, string(uJson), USER_INFO_REDIS_TIME)
 	redis.Set(USERNAME_USER_INFO_REDIS + username, string(uJson), USER_INFO_REDIS_TIME)
 }
 

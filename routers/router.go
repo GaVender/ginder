@@ -21,4 +21,6 @@ func init() {
 	{
 		v1.GET("/personalInfo", http.PersonalInfo)
 	}
+
+	Router.Run()
 }
