@@ -11,12 +11,22 @@ import (
 	"github.com/jmoiron/sqlx"
 	"sync/atomic"
 	"sync"
+	"math/rand"
 )
 
 const DealIdRedisKEY  = "string:integral_expire_deal_id"
 const DealIdRedisTime = 60 * 60 * 24 * 7
-const DealNum		  = 10
-const GoroutineNum	  = 10
+const DealNum		  = 2
+const GoroutineNum	  = 2
+const RecordType	  = 1
+const OrderType		  = 255
+const TradePlatform   = 100
+const DiscountType	  = 2
+const IntegralPay	  = 1
+const SourceType	  = 2
+const Ad			  = 3	
+const BatchId		  = 1108
+const RuleId		  = 441417
 
 var redisObj *redis.Client
 var dbSlave *sqlx.DB
@@ -32,22 +42,14 @@ type integralExpireConfig struct {
 type userIntegralExpire struct {
 	Id uint64 `db:"id" json:"id"`
 	Uid uint64 `db:"uid" json:"uid"`
-	Integral uint64 `db:"integral" json:"integral"`
+	Phone string `db:"phone" json:"phone"`
+	GetIntegral int64 `db:"integral" json:"get_integral"`
+	UseIntegral int64 `json:"use_integral"`
 }
 
-type integralDetail struct {
-	ID uint64 `json:"id" db:"id"`
-	MemberId uint64 `json:"member_id" db:"member_id"`
-	SurplusMabi float32 `json:"surplus_mabi" db:"surplus_mabi"`
-	MabiSource float32 `json:"mabi_source" db:"mabi_source"`
-	Type uint16 `json:"type" db:"type"`
-	CreateTime string `json:"create_time" db:"create_time"`
-	UpdateTime string `json:"update_time" db:"update_time"`
-	SourceType uint8 `json:"source_type" db:"source_type"`
-	RecordNo string `json:"record_no" db:"record_no"`
-	IntegralCode string `json:"integral_code" db:"integral_code"`
-	Remark string `json:"remark" db:"remark"`
-	CardNo string `json:"card_no" db:"card_no"`
+type userSum struct {
+	Uid uint64 `json:"uid" db:"member_id"`
+	IntegralSum float32 `json:"integral_sum" db:"integral_sum"`
 }
 
 func init() {
@@ -56,6 +58,7 @@ func init() {
 	dbMaster = conf.SqlMasterDb()
 	mx = new(sync.RWMutex)
 	wg = new(sync.WaitGroup)
+	rand.Seed(time.Now().UnixNano())
 }
 
 func AutoClean() {
@@ -72,11 +75,6 @@ func AutoClean() {
 		fmt.Println("脚本已清除积分完毕")
 	} else {
 		fmt.Println("总数是：", idMysql)
-
-		if idRedis <= 0 {
-			idRedis = 1
-		}
-
 		var beginId uint64
 
 		for {
@@ -84,6 +82,11 @@ func AutoClean() {
 
 			if idRedis >= idMysql {
 				break
+			}
+
+			if idRedis <= 0 {
+				idRedis = 1
+				beginId = 1
 			}
 
 			atomic.StoreUint64(&beginId, idRedis)
@@ -94,6 +97,7 @@ func AutoClean() {
 				atomic.AddUint64(&beginId, DealNum)
 			}
 
+			setDealId(beginId)
 			wg.Wait()
 			time.Sleep(time.Second * 2)
 			break
@@ -103,6 +107,7 @@ func AutoClean() {
 
 
 
+// 获取积分过期配置
 func getIntegralConfig() *integralExpireConfig {
 	var redisKey = "string:yunying:integral_expire_config"
 
@@ -125,6 +130,7 @@ func getIntegralConfig() *integralExpireConfig {
 	return i
 }
 
+// 是否处于过期清理时间
 func isExpireDealTime(expireType uint8) (bool, string, string) {
 	nowMonth  := int(time.Now().Month())
 	flag 	  := false
@@ -157,6 +163,7 @@ func isExpireDealTime(expireType uint8) (bool, string, string) {
 	return flag, beginTime, endTime
 }
 
+// 获取当前已经处理的ID
 func getDealId() uint64 {
 	mx.RLock()
 	defer mx.RUnlock()
@@ -171,6 +178,7 @@ func getDealId() uint64 {
 	}
 }
 
+// 设置当前已经处理的ID
 func setDealId(i uint64) {
 	mx.Lock()
 	defer mx.Unlock()
@@ -178,6 +186,7 @@ func setDealId(i uint64) {
 	redisObj.Set(DealIdRedisKEY, i, time.Second * DealIdRedisTime)
 }
 
+// 获取要处理的最大ID
 func getBigDealId() uint64 {
 	u := userIntegralExpire{}
 	err := dbSlave.Get(&u, "select id from finance.user_expire_integral order by id desc limit 1")
@@ -190,13 +199,14 @@ func getBigDealId() uint64 {
 	return u.Id
 }
 
+// 处理用户积分过程
 func dealUserIntegral(id uint64, expireBeginTime string, expireEndTime string) {
 	defer wg.Done()
 
 	beginId := id
 	atomic.AddUint64(&id, DealNum)
 	users := []userIntegralExpire{}
-	err := dbSlave.Select(&users, "select uid, integral from finance.user_expire_integral where id >= ? and id < ?",
+	err := dbSlave.Select(&users, "select id, uid, phone, integral from finance.user_expire_integral where id >= ? and id < ?",
 		beginId, id)
 
 	if err != nil {
@@ -205,23 +215,97 @@ func dealUserIntegral(id uint64, expireBeginTime string, expireEndTime string) {
 		count := len(users)
 		fmt.Println("清理的开始ID：", beginId, "，清理的用户数量：", count)
 
+		var list = make(map[uint64]userIntegralExpire)
+
 		for _, u := range users {
-			calUserUsedIntegral(u.Uid, expireBeginTime, expireEndTime)
+			fmt.Println("用户ID：", u.Uid, "；获取的积分：", u.GetIntegral)
+
+			if u.GetIntegral > 0 {
+				u.UseIntegral = calUserUsedIntegral(u.Uid, expireBeginTime, expireEndTime)
+				list[u.Uid] = u
+			}
+		}
+
+		if len(list) > 0 {
+			for _, i := range list {
+				i.cleanIntegral()
+			}
+		} else {
+			fmt.Println("符合要求的用户没有，获取积分均为0")
 		}
 	}
-
-	setDealId(id)
 }
 
-func calUserUsedIntegral(uid uint64, expireBeginTime string, expireEndTime string) {
-	integralDetail := integralDetail{}
-	sql := "select member_id, sum(mabi_source) from orders.integral_detail where member_id in (?) and mabi_source < 0 " +
+// 计算用户使用的积分
+func calUserUsedIntegral(uid uint64, expireBeginTime string, expireEndTime string) int64 {
+	var useIntegral float32
+	userIntegralInfo := userSum{}
+	sql := "select member_id, sum(mabi_source) integral_sum from orders.integral_detail where member_id = ? and mabi_source < 0 " +
 		"and create_time < ? and create_time > ? group by member_id"
-	err := dbSlave.Get(&integralDetail, sql, uid, expireEndTime, expireBeginTime)
+	err := dbSlave.Get(&userIntegralInfo, sql, uid, expireEndTime, expireBeginTime)
 
 	if err != nil {
 		fmt.Println("获取用户积分出错：", err.Error())
+		return 0
 	} else {
-		fmt.Println(integralDetail)
+		useIntegral = userIntegralInfo.IntegralSum
+		fmt.Println("用户已使用的积分：", useIntegral)
+		return int64(useIntegral)
 	}
+}
+
+// 清除用户积分
+func (u *userIntegralExpire)cleanIntegral() {
+	cleanIntegral := u.GetIntegral + u.UseIntegral
+
+	if cleanIntegral <= 0 {
+		fmt.Println("用户：", u.Uid, " 积分不足以扣减：", u.GetIntegral, u.UseIntegral)
+	} else {
+		fmt.Println("开始进行用户：", u.Uid, "的积分扣减...")
+
+		integralStr := ""
+		dbSlave.QueryRow("select user_value from passport.user_meta where uid = ? and user_key = 'mabi'", u.Uid).Scan(&integralStr)
+		integralInt, _ := strconv.Atoi(integralStr)
+		fmt.Println("用户ID：", u.Uid, " 原有积分：", integralInt)
+		recordNo := createNewRecordNo()
+		sqlTime := getSqlTime()
+
+		tx := dbMaster.MustBegin()
+		tx.MustExec("insert into orders.discount_record(user_id, record_no, refund_amount, discount_amount, pay_amount, " +
+			"total_amount, presented, order_id, record_type, spending_type, trade_platform, discount_type) values(?,?,?,?,?,?,?,?,?,?,?,?)",
+				u.Uid, recordNo, 0, 0, 0, 0, cleanIntegral, "", RecordType, OrderType, TradePlatform, DiscountType)
+
+		tx.MustExec("insert into finance.integral_discount_record(record_no, record_type, batch_id, rule_id, user_id, " +
+			"user_phone, order_type, discount_integral, discount_amount, accounting_department, trade_platform) values(?,?,?,?,?,?,?,?,?,?,?)",
+				recordNo, RecordType, BatchId, RuleId, u.Uid, u.Phone, OrderType, cleanIntegral, cleanIntegral, Ad, TradePlatform)
+
+		tx.MustExec("update passport.user_meta set user_value = ? where uid = ? and user_key = 'mabi'", int64(integralInt) - cleanIntegral, u.Uid)
+
+		tx.MustExec("insert into orders.integral_detail(member_id, surplus_mabi, mabi_source, type, create_time, update_time, " +
+			"source_type, record_no, integral_code) values(?,?,?,?,?,?,?,?,?)",
+				u.Uid, int64(integralInt) - cleanIntegral, -cleanIntegral, IntegralPay, sqlTime, sqlTime, SourceType, recordNo, "JFGQ")
+		err := tx.Commit()
+
+		if err != nil {
+			fmt.Println(err.Error())
+		} else {
+			fmt.Println("用户：", u.Uid, "的积分完毕，扣减了 ", cleanIntegral)
+		}
+	}
+}
+
+// 生成sql字段时间
+func getSqlTime() string {
+	return time.Now().Format("2006-01-02 15:04:05")
+}
+
+// 生成流水号
+func createNewRecordNo() string {
+	t := time.Now()
+	year := strconv.Itoa(t.Year())
+
+	recordNo := year[2:] + fmt.Sprintf("%02d", t.Month()) + fmt.Sprintf("%02d", t.Day()) +
+		fmt.Sprintf("%02d", t.Hour()) + fmt.Sprintf("%02d", t.Minute()) + fmt.Sprintf("%02d", t.Second()) +
+		fmt.Sprintf("%05d", rand.Intn(100000))
+	return recordNo
 }
