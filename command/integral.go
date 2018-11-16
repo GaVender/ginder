@@ -24,7 +24,7 @@ const TradePlatform   = 100
 const DiscountType	  = 2
 const IntegralPay	  = 1
 const SourceType	  = 2
-const Ad			  = 3	
+const Ad			  = 3
 const BatchId		  = 1108
 const RuleId		  = 441417
 
@@ -144,7 +144,7 @@ func isExpireDealTime(expireType uint8) (bool, string, string) {
 			endTime = strconv.Itoa(time.Now().Year()) + "-03-01 0:0:0"
 		}
 	} else {
-		if nowMonth == 11 {
+		if nowMonth == 1 {
 			flag = true
 			beginTime = strconv.Itoa(time.Now().Year() - 1) + "-01-01 0:0:0"
 			endTime = strconv.Itoa(time.Now().Year()) + "-01-01 0:0:0"
@@ -271,6 +271,8 @@ func (u *userIntegralExpire)cleanIntegral() {
 		sqlTime := getSqlTime()
 
 		tx := dbMaster.MustBegin()
+		tx.MustExec("update finance.user_expire_integral set clean_integral = ? where uid = ?", cleanIntegral, u.Uid)
+
 		tx.MustExec("insert into orders.discount_record(user_id, record_no, refund_amount, discount_amount, pay_amount, " +
 			"total_amount, presented, order_id, record_type, spending_type, trade_platform, discount_type) values(?,?,?,?,?,?,?,?,?,?,?,?)",
 				u.Uid, recordNo, 0, 0, 0, 0, cleanIntegral, "", RecordType, OrderType, TradePlatform, DiscountType)
