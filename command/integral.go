@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"sync"
 	"math/rand"
+	"math"
 )
 
 const DealIdRedisKEY  = "string:integral_expire_deal_id"
@@ -144,7 +145,7 @@ func isExpireDealTime(expireType uint8) (bool, string, string) {
 			endTime = strconv.Itoa(time.Now().Year()) + "-03-01 0:0:0"
 		}
 	} else {
-		if nowMonth == 1 {
+		if nowMonth == 11 {
 			flag = true
 			beginTime = strconv.Itoa(time.Now().Year() - 1) + "-01-01 0:0:0"
 			endTime = strconv.Itoa(time.Now().Year()) + "-01-01 0:0:0"
@@ -271,7 +272,7 @@ func (u *userIntegralExpire)cleanIntegral() {
 		sqlTime := getSqlTime()
 
 		tx := dbMaster.MustBegin()
-		tx.MustExec("update finance.user_expire_integral set clean_integral = ? where uid = ?", cleanIntegral, u.Uid)
+		tx.MustExec("update finance.user_expire_integral set pay_integral = ? where uid = ?", math.Abs(float64(u.UseIntegral)), u.Uid)
 
 		tx.MustExec("insert into orders.discount_record(user_id, record_no, refund_amount, discount_amount, pay_amount, " +
 			"total_amount, presented, order_id, record_type, spending_type, trade_platform, discount_type) values(?,?,?,?,?,?,?,?,?,?,?,?)",
