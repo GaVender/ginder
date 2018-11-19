@@ -45,7 +45,7 @@ type userIntegralExpire struct {
 	Uid uint64 `db:"uid" json:"uid"`
 	Phone string `db:"phone" json:"phone"`
 	GetIntegral int64 `db:"integral" json:"get_integral"`
-	UseIntegral int64 `json:"use_integral"`
+	UseIntegral int64 `db:"pay_integral" json:"use_integral"`
 }
 
 type userSum struct {
@@ -207,7 +207,7 @@ func dealUserIntegral(id uint64, expireBeginTime string, expireEndTime string) {
 	beginId := id
 	atomic.AddUint64(&id, DealNum)
 	users := []userIntegralExpire{}
-	err := dbSlave.Select(&users, "select id, uid, phone, integral from finance.user_expire_integral where id >= ? and id < ?",
+	err := dbSlave.Select(&users, "select id, uid, phone, integral, pay_integral from finance.user_expire_integral where id >= ? and id < ?",
 		beginId, id)
 
 	if err != nil {
