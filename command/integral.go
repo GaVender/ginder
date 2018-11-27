@@ -17,8 +17,8 @@ import (
 
 const DealIdRedisKEY  = "string:integral_expire_deal_id"
 const DealIdRedisTime = 60 * 60 * 24 * 7
-const DealNum		  = 2
-const GoroutineNum	  = 2
+const DealNum		  = 6
+const GoroutineNum	  = 1
 const RecordType	  = 1
 const OrderType		  = 255
 const TradePlatform   = 100
@@ -145,7 +145,7 @@ func isExpireDealTime(expireType uint8) (bool, string, string) {
 			endTime = strconv.Itoa(time.Now().Year()) + "-03-01 0:0:0"
 		}
 	} else {
-		if nowMonth == 11 {
+		if nowMonth == 1 {
 			flag = true
 			beginTime = strconv.Itoa(time.Now().Year() - 1) + "-01-01 0:0:0"
 			endTime = strconv.Itoa(time.Now().Year()) + "-01-01 0:0:0"
@@ -241,9 +241,9 @@ func dealUserIntegral(id uint64, expireBeginTime string, expireEndTime string) {
 func calUserUsedIntegral(uid uint64, expireBeginTime string, expireEndTime string) int64 {
 	var useIntegral float32
 	userIntegralInfo := userSum{}
-	sql := "select member_id, sum(mabi_source) integral_sum from orders.integral_detail where member_id = ? and mabi_source < 0 " +
-		"and create_time < ? and create_time > ? group by member_id"
-	err := dbSlave.Get(&userIntegralInfo, sql, uid, expireEndTime, expireBeginTime)
+	sql := "select member_id, sum(mabi_source) integral_sum from orders.integral_detail where member_id = ? and type = 1 " +
+		"and mabi_source < 0 and create_time < ? group by member_id"
+	err := dbSlave.Get(&userIntegralInfo, sql, uid, expireEndTime)
 
 	if err != nil {
 		fmt.Println("获取用户积分出错：", err.Error())
@@ -257,6 +257,7 @@ func calUserUsedIntegral(uid uint64, expireBeginTime string, expireEndTime strin
 
 // 清除用户积分
 func (u *userIntegralExpire)cleanIntegral() {
+	dbMaster.MustExec("update finance.user_expire_integral set pay_integral = ? where uid = ?", math.Abs(float64(u.UseIntegral)), u.Uid)
 	cleanIntegral := u.GetIntegral + u.UseIntegral
 
 	if cleanIntegral <= 0 {
@@ -272,7 +273,7 @@ func (u *userIntegralExpire)cleanIntegral() {
 		sqlTime := getSqlTime()
 
 		tx := dbMaster.MustBegin()
-		tx.MustExec("update finance.user_expire_integral set pay_integral = ? where uid = ?", math.Abs(float64(u.UseIntegral)), u.Uid)
+		//tx.MustExec("update finance.user_expire_integral set pay_integral = ? where uid = ?", math.Abs(float64(u.UseIntegral)), u.Uid)
 
 		tx.MustExec("insert into orders.discount_record(user_id, record_no, refund_amount, discount_amount, pay_amount, " +
 			"total_amount, presented, order_id, record_type, spending_type, trade_platform, discount_type) values(?,?,?,?,?,?,?,?,?,?,?,?)",
