@@ -257,11 +257,14 @@ func calUserUsedIntegral(uid uint64, expireBeginTime string, expireEndTime strin
 
 // 清除用户积分
 func (u *userIntegralExpire)cleanIntegral() {
-	dbMaster.MustExec("update finance.user_expire_integral set pay_integral = ? where uid = ?", math.Abs(float64(u.UseIntegral)), u.Uid)
+	if u.UseIntegral < 0 {
+		dbMaster.MustExec("update finance.user_expire_integral set pay_integral = ? where uid = ?", math.Abs(float64(u.UseIntegral)), u.Uid)
+	}
+
 	cleanIntegral := u.GetIntegral + u.UseIntegral
 
 	if cleanIntegral <= 0 {
-		fmt.Println("用户：", u.Uid, " 积分不足以扣减：", u.GetIntegral, u.UseIntegral)
+		fmt.Println("用户：", u.Uid, " 不必扣减：", u.GetIntegral, u.UseIntegral)
 	} else {
 		fmt.Println("开始进行用户：", u.Uid, "的积分扣减...")
 
@@ -269,31 +272,39 @@ func (u *userIntegralExpire)cleanIntegral() {
 		dbSlave.QueryRow("select user_value from passport.user_meta where uid = ? and user_key = 'mabi'", u.Uid).Scan(&integralStr)
 		integralInt, _ := strconv.Atoi(integralStr)
 		fmt.Println("用户ID：", u.Uid, " 原有积分：", integralInt)
-		recordNo := createNewRecordNo()
-		sqlTime := getSqlTime()
 
-		tx := dbMaster.MustBegin()
-		//tx.MustExec("update finance.user_expire_integral set pay_integral = ? where uid = ?", math.Abs(float64(u.UseIntegral)), u.Uid)
+		if integralInt <= 0 {
+			fmt.Println("用户：", u.Uid, " 的原有积分不足以扣减：", integralInt)
+		} else {
+			recordNo := createNewRecordNo()
+			sqlTime := getSqlTime()
 
-		tx.MustExec("insert into orders.discount_record(user_id, record_no, refund_amount, discount_amount, pay_amount, " +
-			"total_amount, presented, order_id, record_type, spending_type, trade_platform, discount_type) values(?,?,?,?,?,?,?,?,?,?,?,?)",
+			tx := dbMaster.MustBegin()
+
+			/*if u.UseIntegral != 0 {
+				tx.MustExec("update finance.user_expire_integral set pay_integral = ? where uid = ?", math.Abs(float64(u.UseIntegral)), u.Uid)
+			}*/
+
+			tx.MustExec("insert into orders.discount_record(user_id, record_no, refund_amount, discount_amount, pay_amount, " +
+				"total_amount, presented, order_id, record_type, spending_type, trade_platform, discount_type) values(?,?,?,?,?,?,?,?,?,?,?,?)",
 				u.Uid, recordNo, 0, 0, 0, 0, cleanIntegral, "", RecordType, OrderType, TradePlatform, DiscountType)
 
-		tx.MustExec("insert into finance.integral_discount_record(record_no, record_type, batch_id, rule_id, user_id, " +
-			"user_phone, order_type, discount_integral, discount_amount, accounting_department, trade_platform) values(?,?,?,?,?,?,?,?,?,?,?)",
+			tx.MustExec("insert into finance.integral_discount_record(record_no, record_type, batch_id, rule_id, user_id, " +
+				"user_phone, order_type, discount_integral, discount_amount, accounting_department, trade_platform) values(?,?,?,?,?,?,?,?,?,?,?)",
 				recordNo, RecordType, BatchId, RuleId, u.Uid, u.Phone, OrderType, cleanIntegral, cleanIntegral, Ad, TradePlatform)
 
-		tx.MustExec("update passport.user_meta set user_value = ? where uid = ? and user_key = 'mabi'", int64(integralInt) - cleanIntegral, u.Uid)
+			tx.MustExec("update passport.user_meta set user_value = ? where uid = ? and user_key = 'mabi'", int64(integralInt) - cleanIntegral, u.Uid)
 
-		tx.MustExec("insert into orders.integral_detail(member_id, surplus_mabi, mabi_source, type, create_time, update_time, " +
-			"source_type, record_no, integral_code) values(?,?,?,?,?,?,?,?,?)",
+			tx.MustExec("insert into orders.integral_detail(member_id, surplus_mabi, mabi_source, type, create_time, update_time, " +
+				"source_type, record_no, integral_code) values(?,?,?,?,?,?,?,?,?)",
 				u.Uid, int64(integralInt) - cleanIntegral, -cleanIntegral, IntegralPay, sqlTime, sqlTime, SourceType, recordNo, "JFGQ")
-		err := tx.Commit()
+			err := tx.Commit()
 
-		if err != nil {
-			fmt.Println(err.Error())
-		} else {
-			fmt.Println("用户：", u.Uid, "的积分完毕，扣减了 ", cleanIntegral)
+			if err != nil {
+				fmt.Println(err.Error())
+			} else {
+				fmt.Println("用户：", u.Uid, "的积分完毕，扣减了 ", cleanIntegral)
+			}
 		}
 	}
 }
