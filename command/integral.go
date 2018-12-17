@@ -17,8 +17,8 @@ import (
 
 const DealIdRedisKEY  = "string:integral_expire_deal_id"
 const DealIdRedisTime = 60 * 60 * 24 * 7
-const DealNum		  = 6
-const GoroutineNum	  = 1
+const DealNum		  = 200
+const GoroutineNum	  = 30
 const RecordType	  = 1
 const OrderType		  = 255
 const TradePlatform   = 100
@@ -100,11 +100,12 @@ func AutoClean() {
 
 			setDealId(beginId)
 			wg.Wait()
-			time.Sleep(time.Second * 2)
-			break
+			time.Sleep(time.Second * 60)
 		}
 	}
 }
+
+
 
 
 
@@ -200,6 +201,22 @@ func getBigDealId() uint64 {
 	return u.Id
 }
 
+// 生成sql字段时间
+func getSqlTime() string {
+	return time.Now().Format("2006-01-02 15:04:05")
+}
+
+// 生成流水号
+func createNewRecordNo() string {
+	t := time.Now()
+	year := strconv.Itoa(t.Year())
+
+	recordNo := year[2:] + fmt.Sprintf("%02d", t.Month()) + fmt.Sprintf("%02d", t.Day()) +
+		fmt.Sprintf("%02d", t.Hour()) + fmt.Sprintf("%02d", t.Minute()) + fmt.Sprintf("%02d", t.Second()) +
+		fmt.Sprintf("%05d", rand.Intn(100000))
+	return recordNo
+}
+
 // 处理用户积分过程
 func dealUserIntegral(id uint64, expireBeginTime string, expireEndTime string) {
 	defer wg.Done()
@@ -221,8 +238,8 @@ func dealUserIntegral(id uint64, expireBeginTime string, expireEndTime string) {
 		for _, u := range users {
 			fmt.Println("用户ID：", u.Uid, "；获取的积分：", u.GetIntegral)
 
-			if u.GetIntegral > 0 {
-				u.UseIntegral = calUserUsedIntegral(u.Uid, expireBeginTime, expireEndTime)
+			if u.GetIntegral - u.UseIntegral > 0 {
+				//u.UseIntegral = calUserUsedIntegral(u.Uid, expireBeginTime, expireEndTime)
 				list[u.Uid] = u
 			}
 		}
@@ -232,7 +249,7 @@ func dealUserIntegral(id uint64, expireBeginTime string, expireEndTime string) {
 				i.cleanIntegral()
 			}
 		} else {
-			fmt.Println("符合要求的用户没有，获取积分均为0")
+			fmt.Println("符合要求的用户没有，可清除的积分均为0")
 		}
 	}
 }
@@ -246,7 +263,7 @@ func calUserUsedIntegral(uid uint64, expireBeginTime string, expireEndTime strin
 	err := dbSlave.Get(&userIntegralInfo, sql, uid, expireEndTime)
 
 	if err != nil {
-		fmt.Println("获取用户积分出错：", err.Error())
+		fmt.Println("获取用户已使用的积分出错：", err.Error())
 		return 0
 	} else {
 		useIntegral = userIntegralInfo.IntegralSum
@@ -257,11 +274,11 @@ func calUserUsedIntegral(uid uint64, expireBeginTime string, expireEndTime strin
 
 // 清除用户积分
 func (u *userIntegralExpire)cleanIntegral() {
-	if u.UseIntegral < 0 {
+	/*if u.UseIntegral < 0 {
 		dbMaster.MustExec("update finance.user_expire_integral set pay_integral = ? where uid = ?", math.Abs(float64(u.UseIntegral)), u.Uid)
-	}
+	}*/
 
-	cleanIntegral := u.GetIntegral + u.UseIntegral
+	cleanIntegral := u.GetIntegral - u.UseIntegral
 
 	if cleanIntegral <= 0 {
 		fmt.Println("用户：", u.Uid, " 不必扣减：", u.GetIntegral, u.UseIntegral)
@@ -276,14 +293,14 @@ func (u *userIntegralExpire)cleanIntegral() {
 		if integralInt <= 0 {
 			fmt.Println("用户：", u.Uid, " 的原有积分不足以扣减：", integralInt)
 		} else {
+			if cleanIntegral > int64(integralInt) {
+				cleanIntegral = int64(integralInt)
+			}
+
 			recordNo := createNewRecordNo()
 			sqlTime := getSqlTime()
 
 			tx := dbMaster.MustBegin()
-
-			/*if u.UseIntegral != 0 {
-				tx.MustExec("update finance.user_expire_integral set pay_integral = ? where uid = ?", math.Abs(float64(u.UseIntegral)), u.Uid)
-			}*/
 
 			tx.MustExec("insert into orders.discount_record(user_id, record_no, refund_amount, discount_amount, pay_amount, " +
 				"total_amount, presented, order_id, record_type, spending_type, trade_platform, discount_type) values(?,?,?,?,?,?,?,?,?,?,?,?)",
@@ -303,24 +320,8 @@ func (u *userIntegralExpire)cleanIntegral() {
 			if err != nil {
 				fmt.Println(err.Error())
 			} else {
-				fmt.Println("用户：", u.Uid, "的积分完毕，扣减了 ", cleanIntegral)
+				fmt.Println("用户：", u.Uid, "的积分扣减完毕，扣减了 ", cleanIntegral)
 			}
 		}
 	}
-}
-
-// 生成sql字段时间
-func getSqlTime() string {
-	return time.Now().Format("2006-01-02 15:04:05")
-}
-
-// 生成流水号
-func createNewRecordNo() string {
-	t := time.Now()
-	year := strconv.Itoa(t.Year())
-
-	recordNo := year[2:] + fmt.Sprintf("%02d", t.Month()) + fmt.Sprintf("%02d", t.Day()) +
-		fmt.Sprintf("%02d", t.Hour()) + fmt.Sprintf("%02d", t.Minute()) + fmt.Sprintf("%02d", t.Second()) +
-		fmt.Sprintf("%05d", rand.Intn(100000))
-	return recordNo
 }
