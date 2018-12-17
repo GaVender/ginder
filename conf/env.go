@@ -26,7 +26,8 @@ var redis_password	  		string
 var redis_db		  		int
 var redis_pool_size   		int
 var mongo_host 				[]string
-var mongo_port		  		string
+var mongo_user				string
+var mongo_password			string
 var mongo_timeout			time.Duration
 var mongo_pool_limit		int
 var mongo_session    		*mgo.Session
@@ -82,7 +83,8 @@ func start() {
 	redis_db, _ 		= strconv.Atoi(os.Getenv("REDIS_DB"))
 	redis_pool_size, _ 	= strconv.Atoi(os.Getenv("REDIS_POOL_SIZE"))
 	mongo_host 			= []string{strings.TrimSpace(os.Getenv("MONGO_HOST"))}
-	mongo_port 			= strings.TrimSpace(os.Getenv("MONGO_PORT"))
+	mongo_user 			= strings.TrimSpace(os.Getenv("MONGO_USER"))
+	mongo_password 		= strings.TrimSpace(os.Getenv("MONGO_PASSWORD"))
 	mongo_timeout 		= time.Second * 2
 	mongo_pool_limit, _ = strconv.Atoi(os.Getenv("MONGO_POOL_LIMIT"))
 }
@@ -155,8 +157,10 @@ func mongoSessionFactory() *mgo.Session {
 
 	dialInfo := &mgo.DialInfo{
 		Addrs:     mongo_host,
-		Direct:    false,
+		Username:  mongo_user,
+		Password:  mongo_password,
 		Timeout:   mongo_timeout,
+		Direct:    false,
 		PoolLimit: mongo_pool_limit,
 	}
 
