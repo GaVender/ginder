@@ -12,12 +12,12 @@ import (
 	"sync/atomic"
 	"sync"
 	"math/rand"
-	"math"
+	//"math"
 )
 
 const DealIdRedisKEY  = "string:integral_expire_deal_id"
 const DealIdRedisTime = 60 * 60 * 24 * 7
-const DealNum		  = 200
+const DealNum		  = 100
 const GoroutineNum	  = 30
 const RecordType	  = 1
 const OrderType		  = 255
@@ -44,6 +44,7 @@ type userIntegralExpire struct {
 	Id uint64 `db:"id" json:"id"`
 	Uid uint64 `db:"uid" json:"uid"`
 	Phone string `db:"phone" json:"phone"`
+	Integral int64 `db:"mabi" json:"integral"`
 	GetIntegral int64 `db:"integral" json:"get_integral"`
 	UseIntegral int64 `db:"pay_integral" json:"use_integral"`
 }
@@ -100,7 +101,7 @@ func AutoClean() {
 
 			setDealId(beginId)
 			wg.Wait()
-			time.Sleep(time.Second * 60)
+			time.Sleep(time.Second * 20)
 		}
 	}
 }
@@ -224,7 +225,8 @@ func dealUserIntegral(id uint64, expireBeginTime string, expireEndTime string) {
 	beginId := id
 	atomic.AddUint64(&id, DealNum)
 	users := []userIntegralExpire{}
-	err := dbSlave.Select(&users, "select id, uid, phone, integral, pay_integral from finance.user_expire_integral where id >= ? and id < ?",
+	err := dbSlave.Select(&users, "select id, uid, phone, mabi, integral, pay_integral " +
+		"from finance.user_expire_integral where id >= ? and id < ?",
 		beginId, id)
 
 	if err != nil {
@@ -236,15 +238,18 @@ func dealUserIntegral(id uint64, expireBeginTime string, expireEndTime string) {
 		var list = make(map[uint64]userIntegralExpire)
 
 		for _, u := range users {
-			fmt.Println("用户ID：", u.Uid, "；获取的积分：", u.GetIntegral)
+			fmt.Println("用户ID：", u.Uid, "；获取的积分：", u.GetIntegral, "，消耗的积分：", u.UseIntegral)
 
 			if u.GetIntegral - u.UseIntegral > 0 {
-				//u.UseIntegral = calUserUsedIntegral(u.Uid, expireBeginTime, expireEndTime)
 				list[u.Uid] = u
 			}
 		}
 
-		if len(list) > 0 {
+		count = len(list)
+
+		if count > 0 {
+			fmt.Println("符合要求的用户开始清理：", count)
+
 			for _, i := range list {
 				i.cleanIntegral()
 			}
@@ -274,27 +279,20 @@ func calUserUsedIntegral(uid uint64, expireBeginTime string, expireEndTime strin
 
 // 清除用户积分
 func (u *userIntegralExpire)cleanIntegral() {
-	/*if u.UseIntegral < 0 {
-		dbMaster.MustExec("update finance.user_expire_integral set pay_integral = ? where uid = ?", math.Abs(float64(u.UseIntegral)), u.Uid)
-	}*/
-
 	cleanIntegral := u.GetIntegral - u.UseIntegral
 
 	if cleanIntegral <= 0 {
 		fmt.Println("用户：", u.Uid, " 不必扣减：", u.GetIntegral, u.UseIntegral)
 	} else {
 		fmt.Println("开始进行用户：", u.Uid, "的积分扣减...")
-
-		integralStr := ""
-		dbSlave.QueryRow("select user_value from passport.user_meta where uid = ? and user_key = 'mabi'", u.Uid).Scan(&integralStr)
-		integralInt, _ := strconv.Atoi(integralStr)
-		fmt.Println("用户ID：", u.Uid, " 原有积分：", integralInt)
+		fmt.Println("用户ID：", u.Uid, " 原有积分：", u.Integral)
+		integralInt := u.Integral
 
 		if integralInt <= 0 {
 			fmt.Println("用户：", u.Uid, " 的原有积分不足以扣减：", integralInt)
 		} else {
-			if cleanIntegral > int64(integralInt) {
-				cleanIntegral = int64(integralInt)
+			if cleanIntegral > integralInt {
+				cleanIntegral = integralInt
 			}
 
 			recordNo := createNewRecordNo()
@@ -310,11 +308,11 @@ func (u *userIntegralExpire)cleanIntegral() {
 				"user_phone, order_type, discount_integral, discount_amount, accounting_department, trade_platform) values(?,?,?,?,?,?,?,?,?,?,?)",
 				recordNo, RecordType, BatchId, RuleId, u.Uid, u.Phone, OrderType, cleanIntegral, cleanIntegral, Ad, TradePlatform)
 
-			tx.MustExec("update passport.user_meta set user_value = ? where uid = ? and user_key = 'mabi'", int64(integralInt) - cleanIntegral, u.Uid)
+			tx.MustExec("update passport.user_meta set user_value = ? where uid = ? and user_key = 'mabi'", integralInt - cleanIntegral, u.Uid)
 
 			tx.MustExec("insert into orders.integral_detail(member_id, surplus_mabi, mabi_source, type, create_time, update_time, " +
 				"source_type, record_no, integral_code) values(?,?,?,?,?,?,?,?,?)",
-				u.Uid, int64(integralInt) - cleanIntegral, -cleanIntegral, IntegralPay, sqlTime, sqlTime, SourceType, recordNo, "JFGQ")
+				u.Uid, integralInt - cleanIntegral, -cleanIntegral, IntegralPay, sqlTime, sqlTime, SourceType, recordNo, "JFGQ")
 			err := tx.Commit()
 
 			if err != nil {

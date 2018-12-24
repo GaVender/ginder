@@ -9,5 +9,3 @@ import (
 func main() {
 	command.AutoClean()
 }
-
-
