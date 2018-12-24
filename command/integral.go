@@ -316,6 +316,7 @@ func (u *userIntegralExpire)cleanIntegral() {
 			err := tx.Commit()
 
 			if err != nil {
+				tx.Rollback()
 				fmt.Println(err.Error())
 			} else {
 				fmt.Println("用户：", u.Uid, "的积分扣减完毕，扣减了 ", cleanIntegral)
