@@ -36,13 +36,35 @@ var log_for_logic	  		string		// 放置代码逻辑错误、运行参数、结�
 var error_logger	  		log4.Logger
 var logic_logger	  		log4.Logger
 
-func init() {
-	// 把相应配置在init做好，避免后面的多并发引起的资源启动等意外的情况
 
-	/*
-		配置变量
-	*/
-	start()
+func Start(_log_for_error string, _log_for_logic string) {
+	if _log_for_error == "" {
+		panic("请设置好异常错误日志路径")
+	}
+
+	if _log_for_logic == "" {
+		panic("请设置好逻辑错误日志路径")
+	}
+
+	log_for_error 		= strings.TrimSpace(_log_for_error)
+	log_for_logic 		= strings.TrimSpace(_log_for_logic)
+	mysql_master_host 	= strings.TrimSpace(os.Getenv("MYSQL_MASTER_HOST"))
+	mysql_slave_host 	= strings.TrimSpace(os.Getenv("MYSQL_SLAVE_HOST"))
+	mysql_port 			= strings.TrimSpace(os.Getenv("MYSQL_PORT"))
+	mysql_username 		= strings.TrimSpace(os.Getenv("MYSQL_USERNAME"))
+	mysql_password 		= strings.TrimSpace(os.Getenv("MYSQL_PASSWORD"))
+	mysql_db 			= strings.TrimSpace(os.Getenv("MYSQL_DB"))
+	redis_master_host 	= strings.TrimSpace(os.Getenv("REDIS_MASTER_HOST"))
+	redis_slave_host 	= strings.TrimSpace(os.Getenv("REDIS_SLAVE_HOST"))
+	redis_port 			= strings.TrimSpace(os.Getenv("REDIS_PORT"))
+	redis_password 		= strings.TrimSpace(os.Getenv("REDIS_PASSWORD"))
+	redis_db, _ 		= strconv.Atoi(os.Getenv("REDIS_DB"))
+	redis_pool_size, _ 	= strconv.Atoi(os.Getenv("REDIS_POOL_SIZE"))
+	mongo_host 			= []string{strings.TrimSpace(os.Getenv("MONGO_HOST"))}
+	mongo_user 			= strings.TrimSpace(os.Getenv("MONGO_USER"))
+	mongo_password 		= strings.TrimSpace(os.Getenv("MONGO_PASSWORD"))
+	mongo_timeout 		= time.Second * 2
+	mongo_pool_limit, _ = strconv.Atoi(os.Getenv("MONGO_POOL_LIMIT"))
 
 	/*
 		设置好日志配置，一个是系统级别错误，一个是业务逻辑错误
@@ -65,28 +87,6 @@ func init() {
 	RedisSlave()
 	fmt.Println("mongo 启动......")
 	MongoSession()
-}
-
-func start() {
-	log_for_error 		= strings.TrimSpace(os.Getenv("LOG_ERROR"))
-	log_for_logic 		= strings.TrimSpace(os.Getenv("LOG_LOGIC"))
-	mysql_master_host 	= strings.TrimSpace(os.Getenv("MYSQL_MASTER_HOST"))
-	mysql_slave_host 	= strings.TrimSpace(os.Getenv("MYSQL_SLAVE_HOST"))
-	mysql_port 			= strings.TrimSpace(os.Getenv("MYSQL_PORT"))
-	mysql_username 		= strings.TrimSpace(os.Getenv("MYSQL_USERNAME"))
-	mysql_password 		= strings.TrimSpace(os.Getenv("MYSQL_PASSWORD"))
-	mysql_db 			= strings.TrimSpace(os.Getenv("MYSQL_DB"))
-	redis_master_host 	= strings.TrimSpace(os.Getenv("REDIS_MASTER_HOST"))
-	redis_slave_host 	= strings.TrimSpace(os.Getenv("REDIS_SLAVE_HOST"))
-	redis_port 			= strings.TrimSpace(os.Getenv("REDIS_PORT"))
-	redis_password 		= strings.TrimSpace(os.Getenv("REDIS_PASSWORD"))
-	redis_db, _ 		= strconv.Atoi(os.Getenv("REDIS_DB"))
-	redis_pool_size, _ 	= strconv.Atoi(os.Getenv("REDIS_POOL_SIZE"))
-	mongo_host 			= []string{strings.TrimSpace(os.Getenv("MONGO_HOST"))}
-	mongo_user 			= strings.TrimSpace(os.Getenv("MONGO_USER"))
-	mongo_password 		= strings.TrimSpace(os.Getenv("MONGO_PASSWORD"))
-	mongo_timeout 		= time.Second * 2
-	mongo_pool_limit, _ = strconv.Atoi(os.Getenv("MONGO_POOL_LIMIT"))
 }
 
 func SqlMasterDb() *sqlx.DB {

@@ -1,4 +1,4 @@
-package command
+package main
 
 import (
 	"ginder/conf"
@@ -12,7 +12,6 @@ import (
 	"sync/atomic"
 	"sync"
 	"math/rand"
-	//"math"
 )
 
 const DealIdRedisKEY  = "string:integral_expire_deal_id"
@@ -55,6 +54,9 @@ type userSum struct {
 }
 
 func init() {
+	// 配置文件路径
+	conf.Start("/home/wwwlogs/go/integral/error.log", "/home/wwwlogs/go/integral/logic.log")
+
 	redisObj = conf.RedisMaster()
 	dbSlave  = conf.SqlSlaveDb()
 	dbMaster = conf.SqlMasterDb()
@@ -104,6 +106,10 @@ func AutoClean() {
 			time.Sleep(time.Second * 20)
 		}
 	}
+}
+
+func main() {
+	AutoClean()
 }
 
 

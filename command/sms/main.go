@@ -1,8 +1,9 @@
 package main
 
 import (
-	_ "ginder/routers"
+	"fmt"
 )
 
 func main() {
+	var _ = fmt.Println
 }
