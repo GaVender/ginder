@@ -48,11 +48,6 @@ type userIntegralExpire struct {
 	UseIntegral int64 `db:"pay_integral" json:"use_integral"`
 }
 
-type userSum struct {
-	Uid uint64 `json:"uid" db:"member_id"`
-	IntegralSum float32 `json:"integral_sum" db:"integral_sum"`
-}
-
 func init() {
 	// 配置文件路径
 	conf.Start("/home/wwwlogs/go/integral/error.log", "/home/wwwlogs/go/integral/logic.log")
@@ -262,24 +257,6 @@ func dealUserIntegral(id uint64, expireBeginTime string, expireEndTime string) {
 		} else {
 			fmt.Println("符合要求的用户没有，可清除的积分均为0")
 		}
-	}
-}
-
-// 计算用户使用的积分
-func calUserUsedIntegral(uid uint64, expireBeginTime string, expireEndTime string) int64 {
-	var useIntegral float32
-	userIntegralInfo := userSum{}
-	sql := "select member_id, sum(mabi_source) integral_sum from orders.integral_detail where member_id = ? and type = 1 " +
-		"and mabi_source < 0 and create_time < ? group by member_id"
-	err := dbSlave.Get(&userIntegralInfo, sql, uid, expireEndTime)
-
-	if err != nil {
-		fmt.Println("获取用户已使用的积分出错：", err.Error())
-		return 0
-	} else {
-		useIntegral = userIntegralInfo.IntegralSum
-		fmt.Println("用户已使用的积分：", useIntegral)
-		return int64(useIntegral)
 	}
 }
 
