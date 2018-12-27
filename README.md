@@ -9,6 +9,6 @@ log
 
 mongodb
 
-grpc（待）
+rpc
 
 trace （待）
