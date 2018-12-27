@@ -2,7 +2,10 @@ package routers
 
 import (
 	"github.com/gin-gonic/gin"
-	"ginder/controllers/http"
+	"github.com/hprose/hprose-golang/rpc"
+
+	h_home "ginder/controllers/http/home"
+	r_home "ginder/controllers/rpc/home"
 )
 
 // 过滤器
@@ -11,16 +14,24 @@ import (
 var Router *gin.Engine
 
 func init() {
+	// route
 	Router = gin.New()
 
-	Router.GET("/home/index", http.Home)
-	Router.GET("/home/login", http.Login)
-	Router.POST("/home/register", http.Register)
+	Router.GET("/home/index", h_home.Home)
+	Router.GET("/home/login", h_home.Login)
+	Router.POST("/home/register", h_home.Register)
 
 	v1 := Router.Group("/v1")
 	{
-		v1.GET("/personalInfo", http.PersonalInfo)
+		v1.GET("/personalInfo", h_home.PersonalInfo)
 	}
 
-	Router.Run()
+	// rpc
+	service := rpc.NewHTTPService()
+	service.AddFunction("userInfo", r_home.UserInfo)
+	Router.Any("/home", func(c *gin.Context) {
+		service.ServeHTTP(c.Writer, c.Request)
+	})
+
+	Router.Run(":8080")
 }

@@ -50,7 +50,7 @@ type userIntegralExpire struct {
 
 func init() {
 	// 配置文件路径
-	conf.Start("/home/wwwlogs/go/integral/error.log", "/home/wwwlogs/go/integral/logic.log")
+	conf.Start("/home/wwwlogs/ginder/integral/error.log", "/home/wwwlogs/ginder/integral/logic.log")
 
 	redisObj = conf.RedisMaster()
 	dbSlave  = conf.SqlSlaveDb()

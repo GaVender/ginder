@@ -1,4 +1,4 @@
-package http
+package home
 
 import (
 	"github.com/gin-gonic/gin"
@@ -19,6 +19,10 @@ const (
 type UserInfoOutput struct {
 	Token 	 string `json:"token"`
 	Username string `json:"username"`
+}
+
+func init() {
+	conf.Start("/home/wwwlogs/ginder/home/error.log", "/home/wwwlogs/ginder/home/logic.log")
 }
 
 func Login(c *gin.Context) {

@@ -1,4 +1,4 @@
-package http
+package home
 
 import (
 	"github.com/gin-gonic/gin"
