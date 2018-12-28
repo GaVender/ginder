@@ -1,6 +1,6 @@
 {
   "console": {
-    "enable": true,
+    "enable": false,
     "level": "FINE"
   },
   "files": [{

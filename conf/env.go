@@ -144,14 +144,6 @@ func RedisSlave() *redis.Client {
 	return getRedis("slave")
 }
 
-func LoggerError() log4.Logger {
-	return error_logger
-}
-
-func LoggerLogic() log4.Logger {
-	return logic_logger
-}
-
 func mongoSessionFactory() *mgo.Session {
 	var err error
 
@@ -182,3 +174,13 @@ func MongoSession() *mgo.Session {
 
 	return mongo_session.Copy()
 }
+
+func LoggerError() log4.Logger {
+	return error_logger
+}
+
+func LoggerLogic() log4.Logger {
+	return logic_logger
+}
+
+// 写日志弄一个统一接口，不暴露日志插件

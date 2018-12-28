@@ -25,8 +25,8 @@ const DiscountType	  = 2
 const IntegralPay	  = 1
 const SourceType	  = 2
 const Ad			  = 3
-const BatchId		  = 1108
-const RuleId		  = 441417
+const BatchId		  = 395
+const RuleId		  = 666654
 
 var redisObj *redis.Client
 var dbSlave *sqlx.DB
@@ -148,7 +148,7 @@ func isExpireDealTime(expireType uint8) (bool, string, string) {
 			endTime = strconv.Itoa(time.Now().Year()) + "-03-01 0:0:0"
 		}
 	} else {
-		if nowMonth == 1 {
+		if nowMonth >= 1 {
 			flag = true
 			beginTime = strconv.Itoa(time.Now().Year() - 1) + "-01-01 0:0:0"
 			endTime = strconv.Itoa(time.Now().Year()) + "-01-01 0:0:0"
