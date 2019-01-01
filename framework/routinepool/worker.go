@@ -20,7 +20,8 @@ func (w *Worker) run() {
 	go func() {
 		for f := range w.task {
 			if f == nil {
-				atomic.AddUint32(&w.pool.running, -1)
+				atomic.AddInt32(&w.pool.running, -1)
+				return
 			}
 
 			f()

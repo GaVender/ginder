@@ -12,10 +12,10 @@ type sig struct{}
 
 type Pool struct {
 	// pool 的容量，即可生成的 worker 最大数量
-	capacity uint32
+	capacity int32
 
 	// 正在运行的 worker 数量
-	running uint32
+	running int32
 
 	// 设置每个 worker 的过期时间（秒）
 	expire time.Duration
@@ -42,7 +42,7 @@ func NewPool(size, expire uint) (*Pool, error) {
 	}
 
 	pool := &Pool{
-		capacity:uint32(size),
+		capacity:int32(size),
 		expire:time.Second * time.Duration(expire),
 		free:make(chan sig, math.MaxInt32),
 		release:make(chan sig, 1),
@@ -101,6 +101,7 @@ func (p *Pool) getWorker() *Worker {
 			pool:p,
 			task:make(chan f),
 		}
+		w.run()
 	}
 
 	return w
