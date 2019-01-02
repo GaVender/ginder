@@ -5,11 +5,15 @@ import (
 	"sync"
 	"errors"
 	"math"
+	"sync/atomic"
 )
 
 type f func() error
 type sig struct{}
 
+/*
+*** 池的结构
+*/
 type Pool struct {
 	// pool 的容量，即可生成的 worker 最大数量
 	capacity int32
@@ -36,9 +40,12 @@ type Pool struct {
 	once sync.Once
 }
 
+/*
+*** 定义协程池
+*/
 func NewPool(size, expire uint) (*Pool, error) {
 	if size <= 0 {
-		return nil, errors.New("池的大小设置有误")
+		return nil, errors.New("池的容量参数应大于0")
 	}
 
 	pool := &Pool{
@@ -48,9 +55,13 @@ func NewPool(size, expire uint) (*Pool, error) {
 		release:make(chan sig, 1),
 	}
 
+	pool.monitorAndClear()
 	return pool, nil
 }
 
+/*
+*** 添加任务
+*/
 func (p *Pool) Submit(task f) error {
 	if len(p.release) > 0 {
 		return errors.New("池已经关闭")
@@ -61,10 +72,45 @@ func (p *Pool) Submit(task f) error {
 	return nil
 }
 
+/*
+*** 获取池的容量
+*/
+func (p *Pool) Capacity() uint {
+	return uint(p.capacity)
+}
+
+/*
+*** 获取正在运行的worker数量
+*/
+func (p *Pool) RunningAmount() uint {
+	return uint(p.running)
+}
+
+/*
+*** 调整池的容量
+*/
+func (p *Pool) Resize(size uint) {
+	if size < p.Capacity() {
+		diff := p.Capacity() - size
+
+		for i := 0; uint(i) < diff; i++ {
+			p.getWorker().stop()
+		}
+	} else if size == p.Capacity() {
+		return
+	}
+
+	atomic.StoreInt32(&p.capacity, int32(size))
+}
+
+/*
+*** 获取worker
+*** 1、无空闲的worker，若worker数量等于池的容量，则等待其他worker跑完；若小于，则新开一个
+*** 2、有空闲的worker，拿出来使用
+ */
 func (p *Pool) getWorker() *Worker {
 	var w *Worker
 	waiting := false
-
 	p.lock.Lock()
 
 	workers := p.workers
@@ -107,10 +153,48 @@ func (p *Pool) getWorker() *Worker {
 	return w
 }
 
+/*
+*** 回收worker
+ */
 func (p *Pool) putWorker(w *Worker) {
 	w.recycleTime = time.Now()
 	p.lock.Lock()
 	p.workers = append(p.workers, w)
 	p.lock.Unlock()
 	p.free <- sig{}
+}
+
+/*
+*** 监控并定期清理worker
+ */
+func (p *Pool) monitorAndClear() {
+	heartBeat := time.NewTicker(p.expire)
+
+	go func() {
+		for range heartBeat.C {
+			currentTime := time.Now()
+			p.lock.Lock()
+
+			workers := p.workers
+			n := 0
+
+			for i,j := range workers {
+				if currentTime.Sub(j.recycleTime) <= p.expire {
+					break
+				} else {
+					n = i
+					j.stop()
+					workers[i] = nil
+					p.running--
+				}
+			}
+
+			if n > 0 {
+				n++
+				p.workers = workers[n:]
+			}
+
+			p.lock.Unlock()
+		}
+	}()
 }

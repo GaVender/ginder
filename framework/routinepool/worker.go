@@ -5,6 +5,9 @@ import (
 	"sync/atomic"
 )
 
+/*
+*** worker的结构
+*/
 type Worker struct {
 	// 拥有该 worker 的 pool
 	pool *Pool
@@ -16,8 +19,12 @@ type Worker struct {
 	recycleTime time.Time
 }
 
+/*
+*** worker运行
+*/
 func (w *Worker) run() {
 	go func() {
+		// chan的属性，会使协程阻塞，除非有值进来，nil也可以
 		for f := range w.task {
 			if f == nil {
 				atomic.AddInt32(&w.pool.running, -1)
@@ -30,10 +37,16 @@ func (w *Worker) run() {
 	}()
 }
 
+/*
+*** worker停止
+*/
 func (w *Worker) stop() {
 	w.sendTask(nil)
 }
 
+/*
+*** worker添加任务
+*/
 func (w *Worker) sendTask(task f) {
 	w.task <- task
 }
