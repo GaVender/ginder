@@ -12,7 +12,7 @@
   },{
     "enable": true,
     "level": "DEBUG",
-    "filename":"rotate_test.log",
+    "filename":"/home/wwwlogs/ginder/logic.log",
     "category": "LogicLog",
     "pattern": "[%D %T] [%C] [%L] (%S) %M",
     "rotate": true,
@@ -22,7 +22,7 @@
   },{
     "enable": true,
     "level": "DEBUG",
-    "filename":"rotate_test.log",
+    "filename":"/home/wwwlogs/go/ginder/error.log",
     "category": "ErrorLog",
     "pattern": "[%D %T] [%C] [%L] (%S) %M",
     "rotate": true,

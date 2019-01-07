@@ -1,17 +1,19 @@
 package home
 
 import (
-	"github.com/gin-gonic/gin"
 	"net/http"
-	"ginder/controllers"
 	"fmt"
 	"time"
-	"gopkg.in/mgo.v2/bson"
+
 	"ginder/conf"
+	"ginder/controllers"
+
+	"github.com/gin-gonic/gin"
+	"gopkg.in/mgo.v2/bson"
 	"gopkg.in/mgo.v2"
 )
 
-type HomeOutput struct {
+type homeOutput struct {
 	ID       bson.ObjectId `json:"id" bson:"_id"`
 	Title 	 string `json:"title" bson:"title"`
 	Username string `json:"username" bson:"username"`
@@ -29,11 +31,10 @@ func Home(c *gin.Context) {
 		defer mongoSession.Close()
 
 		con := mongoSession.DB("passport").C("home_info")
-		output := HomeOutput{}
+		output := homeOutput{}
 
 		if err := con.Find(bson.M{"username": userInfo.Username}).One(&output); err != nil {
 			if err.Error() != mgo.ErrNotFound.Error() {
-				conf.LoggerLogic().Error("mongo find error : %s", err.Error())
 				controllers.ThrowError(c, -1, "首页显示异常，请稍后再试")
 			} else {
 				output.ID = bson.NewObjectId()
@@ -44,7 +45,6 @@ func Home(c *gin.Context) {
 				err := con.Insert(&output)
 
 				if err != nil {
-					conf.LoggerLogic().Error("mongo insert error : %s", err.Error())
 					controllers.ThrowError(c, -1, "首页显示异常，请稍后再试")
 				}
 			}

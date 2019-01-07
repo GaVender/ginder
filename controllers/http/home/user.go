@@ -1,10 +1,14 @@
 package home
 
 import (
-	"github.com/gin-gonic/gin"
 	"net/http"
+
+	"ginder/controllers"
+
+	"github.com/gin-gonic/gin"
 )
 
 func PersonalInfo (c *gin.Context) {
-	c.String(http.StatusOK, "hello man")
+	controllers.ThrowError(c, -1, "首页显示异常，请稍后再试")
+	c.JSON(http.StatusOK, controllers.SwitchResponse(0, 123, ""))
 }

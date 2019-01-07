@@ -47,7 +47,6 @@ func (u *UserLogin) IsExists() int8 {
 		if strings.Index(err.Error(), "no rows in result set") >= 0 {
 			flag = 0
 		} else {
-			conf.LoggerLogic().Error("mysql select user exists error: %s", err.Error())
 		}
 	} else {
 		if user.Id != 0 {

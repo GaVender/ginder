@@ -1,13 +1,15 @@
 package home
 
 import (
-	"github.com/gin-gonic/gin"
 	"net/http"
+	"encoding/json"
+	"time"
+
 	"ginder/controllers"
 	"ginder/models"
 	"ginder/conf"
-	"encoding/json"
-	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 const (
@@ -19,10 +21,6 @@ const (
 type UserInfoOutput struct {
 	Token 	 string `json:"token"`
 	Username string `json:"username"`
-}
-
-func init() {
-	conf.Start("/home/wwwlogs/ginder/home/error.log", "/home/wwwlogs/ginder/home/logic.log")
 }
 
 func Login(c *gin.Context) {
@@ -91,13 +89,11 @@ func Register(c *gin.Context) {
 		ret, err := u.Register()
 
 		if err != nil {
-			conf.LoggerLogic().Error("user register error : %s", err.Error())
 			controllers.ThrowError(c, -1, "注册出错，请稍后再试")
 		} else {
 			id, err := ret.LastInsertId()
 
 			if err != nil {
-				conf.LoggerLogic().Error("user register error : %s", err.Error())
 				controllers.ThrowError(c, -1, "注册成功，请登录")
 			} else {
 				token := u.CreateUserToken()
@@ -118,7 +114,6 @@ func GetUserInfoRedisDataByUsername(username string) *models.UserInfoRedis {
 	ret := redis.Get(USERNAME_USER_INFO_REDIS + username)
 
 	if ret.Err() != nil {
-		conf.LoggerLogic().Error("手机号：%s 没有用户信息redis，error：%s", username, ret.Err().Error())
 	} else {
 		json.Unmarshal([]byte(ret.Val()), &u)
 	}
