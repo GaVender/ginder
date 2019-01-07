@@ -2,10 +2,10 @@ package routers
 
 import (
 	hHome "ginder/controllers/http/home"
-	//rHome "ginder/controllers/rpc/home"
+	rHome "ginder/controllers/rpc/home"
 
 	"github.com/gin-gonic/gin"
-	//"github.com/hprose/hprose-golang/rpc"
+	"github.com/hprose/hprose-golang/rpc"
 )
 
 // 过滤器
@@ -14,12 +14,16 @@ import (
 var Router *gin.Engine
 
 func init() {
+	start()
+}
+
+func start() {
 	// route
 	Router = gin.New()
 
 	Router.Any("/home/user", hHome.PersonalInfo)
 
-	/*Router.GET("/home/index", hHome.Home)
+	Router.GET("/home/index", hHome.Home)
 	Router.GET("/home/login", hHome.Login)
 	Router.POST("/home/register", hHome.Register)
 
@@ -33,7 +37,7 @@ func init() {
 	service.AddFunction("userInfo", rHome.UserInfo)
 	Router.Any("/home", func(c *gin.Context) {
 		service.ServeHTTP(c.Writer, c.Request)
-	})*/
+	})
 
 	Router.Run(":8080")
 }
