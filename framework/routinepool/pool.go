@@ -3,8 +3,6 @@ package routinepool
 import (
 	"time"
 	"sync"
-	"errors"
-	"math"
 	"sync/atomic"
 )
 
@@ -41,22 +39,54 @@ type Pool struct {
 }
 
 /*
-*** 定义协程池
+*** 新建池
 */
 func NewPool(size, expire uint) (*Pool, error) {
 	if size <= 0 {
-		return nil, errors.New("池的容量参数应大于0")
+		return nil, ErrPoolCapacity
+	}
+
+	if expire <= 0 {
+		return nil, ErrPoolExpire
 	}
 
 	pool := &Pool{
 		capacity:int32(size),
 		expire:time.Second * time.Duration(expire),
-		free:make(chan sig, math.MaxInt32),
+		free:make(chan sig, size),
 		release:make(chan sig, 1),
 	}
 
-	pool.monitorAndClear()
+	go pool.monitorAndClear()
 	return pool, nil
+}
+
+/*
+*** 打开池
+*/
+func (p *Pool) Open() {
+	if len(p.release) > 0 {
+		<- p.release
+	}
+}
+
+/*
+*** 关闭池
+*/
+func (p *Pool) Close() {
+	p.once.Do(func() {
+		p.release <- sig{}
+		p.lock.Lock()
+		workers := p.workers
+
+		for i, j := range workers {
+			j.stop()
+			workers[i] = nil
+		}
+
+		p.workers = nil
+		p.lock.Unlock()
+	})
 }
 
 /*
@@ -64,7 +94,7 @@ func NewPool(size, expire uint) (*Pool, error) {
 */
 func (p *Pool) Submit(task f) error {
 	if len(p.release) > 0 {
-		return errors.New("池已经关闭")
+		return ErrPoolClosed
 	}
 
 	w := p.getWorker()
@@ -76,14 +106,21 @@ func (p *Pool) Submit(task f) error {
 *** 获取池的容量
 */
 func (p *Pool) Capacity() uint {
-	return uint(p.capacity)
+	return uint(atomic.LoadInt32(&p.capacity))
 }
 
 /*
 *** 获取正在运行的worker数量
 */
 func (p *Pool) RunningAmount() uint {
-	return uint(p.running)
+	return uint(atomic.LoadInt32(&p.running))
+}
+
+/*
+*** 获取正在运行的worker数量
+*/
+func (p *Pool) FreeAmount() uint {
+	return uint(atomic.AddInt32(&p.capacity, -atomic.LoadInt32(&p.running)))
 }
 
 /*
@@ -104,6 +141,20 @@ func (p *Pool) Resize(size uint) {
 }
 
 /*
+*** 增加正在运行的worker数量
+*/
+func (p *Pool) incRunning() {
+	atomic.AddInt32(&p.running, 1)
+}
+
+/*
+*** 减少正在运行的worker数量
+*/
+func (p *Pool) decRunning() {
+	atomic.AddInt32(&p.running, -1)
+}
+
+/*
 *** 获取worker
 *** 1、无空闲的worker，若worker数量等于池的容量，则等待其他worker跑完；若小于，则新开一个
 *** 2、有空闲的worker，拿出来使用
@@ -119,8 +170,6 @@ func (p *Pool) getWorker() *Worker {
 	if n < 0 {
 		if p.running >= p.capacity {
 			waiting = true
-		} else {
-			p.running++
 		}
 	} else {
 		<- p.free
@@ -148,6 +197,7 @@ func (p *Pool) getWorker() *Worker {
 			task:make(chan f),
 		}
 		w.run()
+		p.incRunning()
 	}
 
 	return w
@@ -169,32 +219,35 @@ func (p *Pool) putWorker(w *Worker) {
  */
 func (p *Pool) monitorAndClear() {
 	heartBeat := time.NewTicker(p.expire)
+	defer heartBeat.Stop()
 
-	go func() {
-		for range heartBeat.C {
-			currentTime := time.Now()
-			p.lock.Lock()
+	for range heartBeat.C {
+		currentTime := time.Now()
+		p.lock.Lock()
 
-			workers := p.workers
-			n := 0
+		workers := p.workers
 
-			for i,j := range workers {
-				if currentTime.Sub(j.recycleTime) <= p.expire {
-					break
-				} else {
-					n = i
-					j.stop()
-					workers[i] = nil
-					p.running--
-				}
-			}
-
-			if n > 0 {
-				n++
-				p.workers = workers[n:]
-			}
-
+		if len(workers) == 0 && p.RunningAmount() == 0 && len(p.release) > 0 {
 			p.lock.Unlock()
+			return
 		}
-	}()
+
+		n := 0
+
+		for i, j := range workers {
+			if currentTime.Sub(j.recycleTime) <= p.expire {
+				break
+			} else {
+				n = i
+				j.stop()
+				workers[i] = nil
+			}
+		}
+
+		if n > 0 {
+			p.workers = workers[n + 1:]
+		}
+
+		p.lock.Unlock()
+	}
 }

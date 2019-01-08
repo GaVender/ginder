@@ -27,7 +27,7 @@ func (w *Worker) run() {
 		// chan的属性，会使协程阻塞，除非有值进来，nil也可以
 		for f := range w.task {
 			if f == nil {
-				atomic.AddInt32(&w.pool.running, -1)
+				w.pool.decRunning()
 				return
 			}
 
