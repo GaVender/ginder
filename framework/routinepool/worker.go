@@ -2,7 +2,6 @@ package routinepool
 
 import (
 	"time"
-	"sync/atomic"
 )
 
 /*
