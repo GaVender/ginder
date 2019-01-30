@@ -13,6 +13,7 @@ import (
 	"github.com/henrylee2cn/mahonia"
 	"net/url"
 	"os"
+	"strconv"
 )
 
 var MwSmsUrl = os.Getenv("MW_SMS_URL")
@@ -60,7 +61,15 @@ type MwSms struct {}
 
 type WlSms struct {}
 
-func SendSms(platform uint8) error {
+func SendSms(platform uint8) {
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Println("send sms error and restart : ", err)
+			time.Sleep(time.Second * RecoverSleepTime)
+			SendSms(platform)
+		}
+	}()
+
 	var s sender
 
 	switch platform {
@@ -71,26 +80,21 @@ func SendSms(platform uint8) error {
 			s = &WlSms{}
 			break
 		default:
-			return ErrPlatform
+			panic("error platform: " + strconv.Itoa(int(platform)))
 	}
 
 	s.send()
-	return nil
 }
 
 func (s *MwSms) send() error {
-	select {
-	case smsList := <- mwWaitSmsListChan:
-		if len(smsList) > 0 {
-			err := s.sendData(&smsList)
+	smsList := <- mwWaitSmsListChan
 
-			if err != nil {
-				fmt.Println("梦网发送失败：", err.Error())
-			}
+	if len(smsList) > 0 {
+		err := s.sendData(&smsList)
+
+		if err != nil {
+			fmt.Println("mw sent error：", err.Error())
 		}
-	default:
-		fmt.Println("sms wait chan no data")
-		time.Sleep(time.Second)
 	}
 
 	return nil
@@ -107,23 +111,23 @@ func (s *MwSms) sendData(smsList *[]SMS) error {
 	resp, err := http.Post(MwSmsUrl, "application/json", strings.NewReader(s.dealData(&b)))
 
 	if err != nil{
-		return errors.New("梦网接口出错：" + err.Error())
+		return errors.New("mw interface error：" + err.Error())
 	} else {
 		r := MwResp{}
 		respBody, err := ioutil.ReadAll(resp.Body)
 
 		if err != nil {
-			return errors.New("梦网获取数据出错：" + err.Error())
+			return errors.New("mw response error：" + err.Error())
 		}
 
 		if err := json.Unmarshal(respBody, &r); err != nil {
-			return errors.New("梦网返回数据解析出错：" + err.Error())
+			return errors.New("mw response analysis error：" + err.Error())
 		} else {
-			fmt.Println("梦网返回数据：", r)
+			fmt.Println("mw response：", r)
 
 			if r.Result != 0 {
 				mwWaitSmsListChan <- *smsList
-				return errors.New(fmt.Sprintf("梦网发送出错：%d", r.Result))
+				return errors.New(fmt.Sprintf("mw sent error：%d", r.Result))
 			} else {
 				s.saveData(&b, r.MsgId)
 			}
@@ -159,9 +163,9 @@ func (s *MwSms) saveData(b *BatchSms, msgId int64) error {
 
 			select {
 			case mwSentSmsListChan <- sp:
-				fmt.Println("短信发完，放入send chan：", sp.ID)
+				fmt.Println("mw sms sent success and put in sent chan：", sp.ID)
 			case <- time.After(time.Microsecond * 50):
-				fmt.Println("短信发完，放入send chan 超时，已丢弃：", sp.ID)
+				fmt.Println("mw sms sent success but put in sent chan overtime：", sp.ID)
 			}
 		}
 	}

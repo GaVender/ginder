@@ -13,6 +13,8 @@ const MwUUIDRedis 				= "list:mw_sms_uuid"
 const MwLastIdRedis 			= "string:mw_sms_id"
 const WlUUIDRedis 				= "list:wl_sms_uuid"
 const WlLastIdRedis 			= "string:wl_sms_id"
+const MwMongoGetNum				= 80
+const WlMongoGetNum				= 80
 const SmsTypeMw 				= 2
 const SmsTypeWl 				= 3
 const SmsIdExpire 				= 60 * 60 * 24 * 30
@@ -22,7 +24,7 @@ const NotSend 					= 0
 const Sent 						= 1
 const MongoDatabase   			= "sms"
 const MongoCollection 			= "batch_info_"
-const MongoGetDataNum 			= 80
+const RecoverSleepTime			= 3
 
 var mwWaitSmsListChan = make(chan []SMS, SmsWaitListChanLength)
 var wlWaitSmsListChan = make(chan []SMS, SmsWaitListChanLength)
@@ -51,6 +53,83 @@ type SmsUpdate struct {
 	MsgId 	string			`json:"msg_id" bson:"msg_id"`
 }
 
+func GetDataFromMongo(platform uint8) {
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Println("get data from mongo error and restart : ", err)
+			time.Sleep(time.Second * RecoverSleepTime)
+			GetDataFromMongo(platform)
+		}
+	}()
+
+	var batchGetNumFromMongo uint16
+
+	if SmsTypeMw == platform {
+		batchGetNumFromMongo = MwMongoGetNum
+	} else if SmsTypeWl == platform {
+		batchGetNumFromMongo = WlMongoGetNum
+	} else {
+		panic("error sms platform: " + strconv.Itoa(int(platform)))
+	}
+
+	mongo := conf.MongoSession()
+	defer mongo.Close()
+
+	redisObj := conf.RedisMaster()
+	defer redisObj.Close()
+
+	ts  := time.Now().Format("200601")
+	con := mongo.DB(MongoDatabase).C(MongoCollection + ts)
+	sms := SMS{}
+
+	beginId, err := getSmsLastSentId(platform, redisObj)
+
+	if err != nil {
+		fmt.Println("platform ", platform, " get sms last id error: ", err.Error())
+	}
+
+	for {
+		uuid, err := getUUID(platform, redisObj)
+
+		if err != nil {
+			fmt.Println("platform ", platform, " get uuid error: ", err.Error())
+			break
+		}
+
+		if "" == uuid {
+			fmt.Println("platform ", platform, " uuid is empty, sms have sent over")
+		} else {
+			for {
+				smsList := []SMS{}
+
+				i := con.Find(bson.M{
+					"_id":           bson.M{"$gt": beginId},
+					"uuid":          uuid,
+					"platform_type": platform,
+					"to_platform":   NotSend,
+				}).Sort("_id").Limit(int(batchGetNumFromMongo)).Iter()
+
+				for i.Next(&sms) {
+					smsList = append(smsList, sms)
+					beginId = sms.ID
+				}
+
+				if len(smsList) <= 0 {
+					fmt.Println("platform ", platform, " uuid: ", uuid, " has sent over")
+					break
+				} else {
+					setSmsData(platform, &smsList)
+				}
+
+				setSmsLastSentId(platform, redisObj, beginId)
+				fmt.Println("platform ", platform, " sms: ", smsList)
+			}
+		}
+
+		time.Sleep(time.Second * RecoverSleepTime)
+	}
+}
+
 func getUUID(platform uint8, redisObj *redis.Client) (string, error) {
 	var redisName string
 
@@ -64,129 +143,6 @@ func getUUID(platform uint8, redisObj *redis.Client) (string, error) {
 
 	uuid := redisObj.LPop(redisName).Val()
 	return uuid, nil
-}
-
-func GetDataFromMongo(platform uint8) {
-	if SmsTypeMw == platform {
-		mwGetDataFromMongo()
-	} else if SmsTypeWl == platform {
-		wlGetDataFromMongo()
-	} else {
-		panic("get mongo error platform: " + strconv.Itoa(int(platform)))
-	}
-}
-
-func mwGetDataFromMongo() {
-	defer func() {
-		if err := recover(); err != nil {
-			fmt.Println("从mongo获取报错并重启: ", err)
-			time.Sleep(time.Second * 3)
-			mwGetDataFromMongo()
-		}
-	}()
-
-	mongo := conf.MongoSession()
-	defer mongo.Close()
-
-	redisObj := conf.RedisMaster()
-	defer redisObj.Close()
-
-	ts  := time.Now().Format("200601")
-	con := mongo.DB(MongoDatabase).C(MongoCollection + ts)
-	sms := SMS{}
-
-	beginId, err := getSmsLastSentId(SmsTypeMw, redisObj)
-
-	if err != nil {
-		fmt.Println("get sms last id error: ", err.Error())
-	}
-
-	//for {
-		uuid, err := getUUID(SmsTypeMw, redisObj)
-
-		if err != nil {
-			fmt.Println("get uuid error: ", err.Error())
-			//break
-		}
-
-		if "" == uuid {
-			fmt.Println("sms have sent over, uuid is empty")
-		} else {
-			for {
-				smsList := []SMS{}
-
-				i := con.Find(bson.M{
-					"_id":           bson.M{"$gt": beginId},
-					"uuid":          uuid,
-					"platform_type": SmsTypeMw,
-					"to_platform":   NotSend,
-				}).Sort("_id").Limit(MongoGetDataNum).Iter()
-
-				for i.Next(&sms) {
-					smsList = append(smsList, sms)
-					beginId = sms.ID
-				}
-
-				if len(smsList) <= 0 {
-					fmt.Println("uuid: ", uuid, " has sent over")
-					break
-				} else {
-					setSmsData(SmsTypeMw, &smsList)
-				}
-
-				setSmsLastSentId(SmsTypeMw, redisObj, beginId)
-				fmt.Println(smsList)
-			}
-		}
-
-		time.Sleep(time.Second * 3)
-	//}
-}
-
-func wlGetDataFromMongo() {
-
-}
-
-func UpdateDataToMongo(platform uint8) {
-	if SmsTypeMw == platform {
-		mwUpdateDataToMongo()
-	} else if SmsTypeWl == platform {
-		wlUpdateDataToMongo()
-	} else {
-		panic("update mongo error platform: " + strconv.Itoa(int(platform)))
-	}
-}
-
-func mwUpdateDataToMongo() {
-	defer func() {
-		if err := recover(); err != nil {
-			fmt.Println("更新回mongo报错并重启: ", err)
-			time.Sleep(time.Second * 3)
-			mwUpdateDataToMongo()
-		}
-	}()
-
-	sms := <- mwSentSmsListChan
-
-	if sms.ID != "" {
-		mongo := conf.MongoSession()
-		defer mongo.Close()
-
-		ts  := time.Now().Format("200601")
-		con := mongo.DB(MongoDatabase).C(MongoCollection + ts)
-		err := con.UpdateId(sms.ID, bson.M{"$set": bson.M{"to_platform": 1, "msg_id": sms.MsgId, "last_update_time": int32(time.Now().Unix())}})
-
-		if err != nil {
-			fmt.Println(sms.ID, " 更新失败：", err.Error())
-			mwSentSmsListChan <- sms
-		} else {
-			fmt.Println(sms.ID, " 更新成功")
-		}
-	}
-}
-
-func wlUpdateDataToMongo() {
-
 }
 
 func getSmsLastSentId(platform uint8, redisObj *redis.Client) (bson.ObjectId, error) {
@@ -231,5 +187,47 @@ func setSmsData(platform uint8, d *[]SMS) {
 		wlWaitSmsListChan <- *d
 	} else {
 		fmt.Println(ErrPlatform)
+	}
+}
+
+func UpdateDataToMongo(platform uint8) {
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Println("update mongo error and restart : ", err)
+			time.Sleep(time.Second * RecoverSleepTime)
+			UpdateDataToMongo(platform)
+		}
+	}()
+
+	var chanList chan SmsUpdate
+
+	if SmsTypeMw == platform {
+		chanList = mwSentSmsListChan
+	} else if SmsTypeWl == platform {
+		chanList = wlSentSmsListChan
+	} else {
+		panic("error platform: " + strconv.Itoa(int(platform)))
+	}
+
+	sms := <- chanList
+
+	if sms.ID != "" {
+		mongo := conf.MongoSession()
+		defer mongo.Close()
+
+		ts  := time.Now().Format("200601")
+		con := mongo.DB(MongoDatabase).C(MongoCollection + ts)
+		err := con.UpdateId(sms.ID, bson.M{
+			"$set": bson.M{
+				"to_platform": Sent, "msg_id": sms.MsgId, "last_update_time": int32(time.Now().Unix()),
+			},
+		})
+
+		if err != nil {
+			fmt.Println("platform: ", platform, " ", sms.ID, " update mongo fail：", err.Error())
+			chanList <- sms
+		} else {
+			fmt.Println("platform: ", platform, " ", sms.ID, " update mongo success")
+		}
 	}
 }

@@ -2,16 +2,17 @@ package main
 
 import (
 	"fmt"
-
 )
 
 func main() {
 	var _ = fmt.Println
+	var ch chan int
 
-	GetDataFromMongo(2)
-	SendSms(2)
-	SendSms(2)
-	//UpdateDataToMongo(2)
-	//UpdateDataToMongo(2)
+	go GetDataFromMongo(2)
+	go SendSms(2)
+	go UpdateDataToMongo(2)
+	go UpdateDataToMongo(2)
+
+	<- ch
 }
 
