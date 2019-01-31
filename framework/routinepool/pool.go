@@ -57,7 +57,7 @@ func NewPool(size, expire uint) (*Pool, error) {
 		release:make(chan sig, 1),
 	}
 
-	go pool.monitorAndClear()
+	//go pool.monitorAndClear()
 	return pool, nil
 }
 

@@ -14,11 +14,18 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"ginder/framework/routinepool"
 )
 
 var MwSmsUrl = os.Getenv("MW_SMS_URL")
 var MwSmsSp  = os.Getenv("MW_SMS_SP")
 var MwSmsPwd = os.Getenv("MW_SMS_PWD")
+
+var WlSmsUrl = os.Getenv("WL_SMS_URL")
+var WlSmsSp  = os.Getenv("WL_SMS_SP")
+var WlSmsPwd = os.Getenv("WL_SMS_PWD")
+var WlSmsSrc = os.Getenv("WL_SMS_SRCPHONE")
+
 
 type Sms struct {
 	Id 		bson.ObjectId 	`json:"id"`
@@ -57,9 +64,57 @@ type MwResp struct {
 	CustId string 	`json:"custid"`
 }
 
+type WlSmsStruct struct {
+	Uid 	 string `json:"uid"`
+	Sign 	 string `json:"sign"`
+	Srcphone string `json:"srcphone"`
+	Msg 	 string `json:"msg"`
+}
+
+type WlSmsMsg struct {
+	Phone 	string `json:"phone"`
+	Context string `json:"context"`
+}
+
+type WlResp string
+
 type MwSms struct {}
 
 type WlSms struct {}
+
+func CreateSendPool(platform uint8) {
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Println("create sms pool error and restart : ", err)
+			time.Sleep(time.Second * RecoverSleepTime)
+			CreateSendPool(platform)
+		}
+	}()
+
+	var pool *routinepool.Pool
+	var err error
+
+	if SmsTypeMw == platform {
+		pool, err = routinepool.NewPool(MwSendPoolSize, MwSendPoolExpire)
+	} else if SmsTypeWl == platform {
+		pool, err = routinepool.NewPool(WlSendPoolSize, WlSendPoolExpire)
+	} else {
+		panic("error sms platform: " + strconv.Itoa(int(platform)))
+	}
+
+	if err != nil {
+		panic("platform " + strconv.Itoa(int(platform)) + " create pool error: " + err.Error())
+	} else {
+		fmt.Println("create platform ", platform, " send pool success...")
+	}
+
+	for true {
+		pool.Submit(func() error {
+			SendSms(platform)
+			return nil
+		})
+	}
+}
 
 func SendSms(platform uint8) {
 	defer func() {
@@ -73,10 +128,10 @@ func SendSms(platform uint8) {
 	var s sender
 
 	switch platform {
-		case 2:
+		case SmsTypeMw:
 			s = &MwSms{}
 			break
-		case 3:
+		case SmsTypeWl:
 			s = &WlSms{}
 			break
 		default:
@@ -174,17 +229,90 @@ func (s *MwSms) saveData(b *BatchSms, msgId int64) error {
 }
 
 func (s *WlSms) send() error {
+	smsList := <- wlWaitSmsListChan
+
+	if len(smsList) > 0 {
+		err := s.sendData(&smsList)
+
+		if err != nil {
+			fmt.Println("wl sent error：", err.Error())
+		}
+	}
+
 	return nil
 }
 
 func (s *WlSms) sendData(smsList *[]SMS) error {
+	b := BatchSms{}
+
+	for _, v := range *smsList {
+		b = append(b, Sms{Id: v.ID, Phone: v.Phone, Content: v.Content, UUID: v.UUID})
+	}
+
+	resp, err := http.Post(WlSmsUrl, "application/json", strings.NewReader(s.dealData(&b)))
+
+	if err != nil{
+		return errors.New("wl interface error：" + err.Error())
+	} else {
+		//var r WlResp
+		respBody, err := ioutil.ReadAll(resp.Body)
+
+		if err != nil {
+			return errors.New("wl response error：" + err.Error())
+		}
+fmt.Println(url.QueryUnescape(string(respBody)))
+return nil
+		/*if err := json.Unmarshal(respBody, &r); err != nil {
+			return errors.New("wl response analysis error：" + err.Error())
+		} else {
+			fmt.Println("wl response：", r)
+
+			if r.ID != 0 {
+				//mwWaitSmsListChan <- *smsList
+				return errors.New(fmt.Sprintf("wl sent error：%d", r))
+			} else {
+				//s.saveData(&b, r.MsgId)
+			}
+		}*/
+	}
+
 	return nil
 }
 
 func (s *WlSms) dealData(b *BatchSms) string {
-	return ""
+	var msg []WlSmsMsg
+
+	for _, v := range *b {
+		w := WlSmsMsg{Phone: v.Phone, Context: v.Content}
+		msg = append(msg, w)
+	}
+
+	msgByte, _ := json.Marshal(msg)
+	msgStr := string(msgByte)
+	msgStr = strings.Replace(msgStr, "\"", "&quot;", -1)
+	msgStr = strings.ToLower(url.QueryEscape(msgStr))
+
+	sign := msgStr + WlSmsPwd
+	sign = fmt.Sprintf("%x", md5.Sum([]byte(sign)))
+	param := WlSmsStruct{Uid: WlSmsSp, Sign: sign, Srcphone: WlSmsSrc, Msg: msgStr}
+	data, _ := json.Marshal(param)
+	fmt.Println(string(data))
+	return string(data)
 }
 
-func (s *WlSms) saveData(b *BatchSms) error {
+func (s *WlSms) saveData(b *BatchSms, msgId string) error {
+	if len(*b) > 0 {
+		for _, v := range *b {
+			sp := SmsUpdate{ID: v.Id, MsgId: msgId}
+
+			select {
+			case wlSentSmsListChan <- sp:
+				fmt.Println("wl sms sent success and put in sent chan：", sp.ID)
+			case <- time.After(time.Microsecond * 50):
+				fmt.Println("wl sms sent success but put in sent chan overtime：", sp.ID)
+			}
+		}
+	}
+
 	return nil
 }

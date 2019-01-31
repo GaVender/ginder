@@ -7,11 +7,11 @@ import (
 func main() {
 	var _ = fmt.Println
 	var ch chan int
+	var platform uint8 = 2
 
-	go GetDataFromMongo(2)
-	go SendSms(2)
-	go UpdateDataToMongo(2)
-	go UpdateDataToMongo(2)
+	go GetDataFromMongo(platform)
+	go CreateSendPool(platform)
+	go CreateUpdatePool(platform)
 
 	<- ch
 }

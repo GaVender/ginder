@@ -7,6 +7,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"gopkg.in/redis.v5"
 	"strconv"
+	"ginder/framework/routinepool"
 )
 
 const MwUUIDRedis 				= "list:mw_sms_uuid"
@@ -15,11 +16,20 @@ const WlUUIDRedis 				= "list:wl_sms_uuid"
 const WlLastIdRedis 			= "string:wl_sms_id"
 const MwMongoGetNum				= 80
 const WlMongoGetNum				= 80
+const MwSendPoolSize			= 5
+const MwSendPoolExpire			= 5
+const MwUpdatePoolSize			= 5
+const MwUpdatePoolExpire		= 5
+const WlSendPoolSize			= 5
+const WlSendPoolExpire			= 5
+const WlUpdatePoolSize			= 5
+const WlUpdatePoolExpire		= 5
 const SmsTypeMw 				= 2
 const SmsTypeWl 				= 3
 const SmsIdExpire 				= 60 * 60 * 24 * 30
 const SmsWaitListChanLength 	= 100
 const SmsSentListChanLength 	= 20000
+const SmsWaitListChanSleep		= 1
 const NotSend 					= 0
 const Sent 						= 1
 const MongoDatabase   			= "sms"
@@ -53,6 +63,12 @@ type SmsUpdate struct {
 	MsgId 	string			`json:"msg_id" bson:"msg_id"`
 }
 
+
+func init() {
+	t := time.Now().Format("2006-01-02 15:04:05")
+	fmt.Println("Sms program start : ", t)
+}
+
 func GetDataFromMongo(platform uint8) {
 	defer func() {
 		if err := recover(); err != nil {
@@ -72,6 +88,7 @@ func GetDataFromMongo(platform uint8) {
 		panic("error sms platform: " + strconv.Itoa(int(platform)))
 	}
 
+	fmt.Println("create platform ", platform, " get data goroutine success...")
 	mongo := conf.MongoSession()
 	defer mongo.Close()
 
@@ -181,12 +198,66 @@ func setSmsLastSentId(platform uint8, redisObj *redis.Client, id bson.ObjectId) 
 }
 
 func setSmsData(platform uint8, d *[]SMS) {
+	var listChan chan []SMS
+
 	if SmsTypeMw == platform {
-		mwWaitSmsListChan <- *d
+		listChan = mwWaitSmsListChan
 	} else if SmsTypeWl == platform {
-		wlWaitSmsListChan <- *d
+		listChan = wlWaitSmsListChan
 	} else {
 		fmt.Println(ErrPlatform)
+		return
+	}
+
+	flag := false
+
+	for true {
+		select {
+		case listChan <- *d:
+			flag = true
+			break
+		default:
+			fmt.Println("platform ", platform, " wait chan is full, can not put in data")
+			time.Sleep(time.Second * SmsWaitListChanSleep)
+		}
+
+		if flag {
+			break
+		}
+	}
+}
+
+func CreateUpdatePool(platform uint8) {
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Println("update sms pool error and restart : ", err)
+			time.Sleep(time.Second * RecoverSleepTime)
+			CreateUpdatePool(platform)
+		}
+	}()
+
+	var pool *routinepool.Pool
+	var err error
+
+	if SmsTypeMw == platform {
+		pool, err = routinepool.NewPool(MwUpdatePoolSize, MwUpdatePoolExpire)
+	} else if SmsTypeWl == platform {
+		pool, err = routinepool.NewPool(WlUpdatePoolSize, WlUpdatePoolExpire)
+	} else {
+		panic("error sms platform: " + strconv.Itoa(int(platform)))
+	}
+
+	if err != nil {
+		panic("platform " + strconv.Itoa(int(platform)) + " create pool error: " + err.Error())
+	} else {
+		fmt.Println("create platform ", platform, " update pool success...")
+	}
+
+	for true {
+		pool.Submit(func() error {
+			UpdateDataToMongo(platform)
+			return nil
+		})
 	}
 }
 
