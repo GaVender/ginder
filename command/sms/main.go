@@ -6,14 +6,10 @@ import (
 
 func main() {
 	var _ = fmt.Println
-	var ch chan int
-	var platform uint8 = 2
+	var ch = make(chan int)
 
-	go GetDataFromMongo(platform)
-	go CreateSendPool(platform)
-	go CreateUpdatePool(platform)
+	go SendProcedure(2)
 	go monitor()
 
-	<- ch
+	<-ch
 }
-

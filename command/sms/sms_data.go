@@ -37,7 +37,7 @@ const SmsSentListChanLength 	= 20000
 const SmsWaitListChanSleep		= 1
 const RecoverSleepTime			= 3
 const MonitorHeartBeatTime		= 5
-const MonitorExpireTime			= 6
+const MonitorExpireTime			= 10
 
 
 var mwWaitSmsListChan = make(chan []SMS, SmsWaitListChanLength)
@@ -76,6 +76,24 @@ type SmsUpdate struct {
 func init() {
 	t := time.Now().Format(DateFormat)
 	fmt.Println("Sms program start : ", t)
+}
+
+func SendProcedure(platform uint8) {
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Println("Start send sms whole procedure error and restart: ", err)
+			time.Sleep(time.Second * RecoverSleepTime)
+			SendProcedure(platform)
+		}
+	}()
+
+	if SmsTypeMw == platform || SmsTypeWl == platform {
+		go GetDataFromMongo(platform)
+		go CreateSendPool(platform)
+		go CreateUpdatePool(platform)
+	} else {
+		panic("error sms platform: " + strconv.Itoa(int(platform)))
+	}
 }
 
 func GetDataFromMongo(platform uint8) {
@@ -342,13 +360,13 @@ func monitor() {
 
 		for k, v := range sendSmsProgramRunTime {
 			if (ts - v) > MonitorExpireTime {
-				fmt.Println("program of platform ", k, " sending sms from mongo is stop: ", time.Unix(v, 0).Format(DateFormat))
+				fmt.Println("program of platform ", k, " sending sms is blocking: ", time.Unix(v, 0).Format(DateFormat))
 			}
 		}
 
 		for k, v := range updateSmsProgramRunTime {
 			if (ts - v) > MonitorExpireTime {
-				fmt.Println("program of platform ", k, " updating sms from mongo is stop: ", time.Unix(v, 0).Format(DateFormat))
+				fmt.Println("program of platform ", k, " updating sms to mongo is blocking: ", time.Unix(v, 0).Format(DateFormat))
 			}
 		}
 	}
