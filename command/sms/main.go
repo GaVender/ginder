@@ -12,6 +12,7 @@ func main() {
 	go GetDataFromMongo(platform)
 	go CreateSendPool(platform)
 	go CreateUpdatePool(platform)
+	go monitor()
 
 	<- ch
 }

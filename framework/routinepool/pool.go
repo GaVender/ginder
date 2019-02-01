@@ -4,6 +4,7 @@ import (
 	"time"
 	"sync"
 	"sync/atomic"
+	"fmt"
 )
 
 type f func() error
@@ -57,7 +58,7 @@ func NewPool(size, expire uint) (*Pool, error) {
 		release:make(chan sig, 1),
 	}
 
-	//go pool.monitorAndClear()
+	go pool.monitorAndClear()
 	return pool, nil
 }
 
@@ -230,17 +231,21 @@ func (p *Pool) monitorAndClear() {
 		if len(workers) == 0 && p.RunningAmount() == 0 && len(p.release) > 0 {
 			p.lock.Unlock()
 			return
+		} else {
+			fmt.Println("worker 个数：", len(workers))
 		}
 
 		n := 0
 
 		for i, j := range workers {
-			if currentTime.Sub(j.recycleTime) <= p.expire {
-				break
-			} else {
-				n = i
-				j.stop()
-				workers[i] = nil
+			if j != nil {
+				if currentTime.Sub(j.recycleTime) <= p.expire {
+					break
+				} else {
+					n = i
+					j.stop()
+					workers[i] = nil
+				}
 			}
 		}
 

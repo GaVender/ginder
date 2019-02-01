@@ -82,6 +82,7 @@ type MwSms struct {}
 
 type WlSms struct {}
 
+
 func CreateSendPool(platform uint8) {
 	defer func() {
 		if err := recover(); err != nil {
@@ -109,6 +110,8 @@ func CreateSendPool(platform uint8) {
 	}
 
 	for true {
+		sendSmsProgramRunTime[platform] = time.Now().Unix()
+
 		pool.Submit(func() error {
 			SendSms(platform)
 			return nil

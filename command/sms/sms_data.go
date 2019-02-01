@@ -10,6 +10,11 @@ import (
 	"ginder/framework/routinepool"
 )
 
+const DateFormat				= "2006-01-02 15:04:05"
+const NotSend 					= 0
+const Sent 						= 1
+const MongoDatabase   			= "sms"
+const MongoCollection 			= "batch_info_"
 const MwUUIDRedis 				= "list:mw_sms_uuid"
 const MwLastIdRedis 			= "string:mw_sms_id"
 const WlUUIDRedis 				= "list:wl_sms_uuid"
@@ -30,16 +35,20 @@ const SmsIdExpire 				= 60 * 60 * 24 * 30
 const SmsWaitListChanLength 	= 100
 const SmsSentListChanLength 	= 20000
 const SmsWaitListChanSleep		= 1
-const NotSend 					= 0
-const Sent 						= 1
-const MongoDatabase   			= "sms"
-const MongoCollection 			= "batch_info_"
 const RecoverSleepTime			= 3
+const MonitorHeartBeatTime		= 5
+const MonitorExpireTime			= 6
+
 
 var mwWaitSmsListChan = make(chan []SMS, SmsWaitListChanLength)
 var wlWaitSmsListChan = make(chan []SMS, SmsWaitListChanLength)
 var mwSentSmsListChan = make(chan SmsUpdate, SmsSentListChanLength)
 var wlSentSmsListChan = make(chan SmsUpdate, SmsSentListChanLength)
+
+var getSmsProgramRunTime 	= make(map[uint8]int64)
+var sendSmsProgramRunTime 	= make(map[uint8]int64)
+var updateSmsProgramRunTime = make(map[uint8]int64)
+
 
 type SMS struct {
 	ToPlatform 			int8 			`json:"to_platform" bson:"to_platform"`
@@ -65,7 +74,7 @@ type SmsUpdate struct {
 
 
 func init() {
-	t := time.Now().Format("2006-01-02 15:04:05")
+	t := time.Now().Format(DateFormat)
 	fmt.Println("Sms program start : ", t)
 }
 
@@ -106,6 +115,8 @@ func GetDataFromMongo(platform uint8) {
 	}
 
 	for {
+		getSmsProgramRunTime[platform] = time.Now().Unix()
+
 		uuid, err := getUUID(platform, redisObj)
 
 		if err != nil {
@@ -254,6 +265,8 @@ func CreateUpdatePool(platform uint8) {
 	}
 
 	for true {
+		updateSmsProgramRunTime[platform] = time.Now().Unix()
+
 		pool.Submit(func() error {
 			UpdateDataToMongo(platform)
 			return nil
@@ -299,6 +312,44 @@ func UpdateDataToMongo(platform uint8) {
 			chanList <- sms
 		} else {
 			fmt.Println("platform: ", platform, " ", sms.ID, " update mongo success")
+		}
+	}
+}
+
+func monitor() {
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Println("monitor program error and restart: ", err)
+			time.Sleep(time.Second * RecoverSleepTime)
+			monitor()
+		}
+	}()
+
+	fmt.Println("Monitor program start: ", time.Now().Format(DateFormat))
+
+	heartBeat := time.NewTicker(time.Second * MonitorHeartBeatTime)
+	defer heartBeat.Stop()
+
+	for range heartBeat.C {
+		ts := time.Now().Unix()
+		fmt.Println("monitor time: ", time.Unix(ts,0).Format(DateFormat))
+
+		for k, v := range getSmsProgramRunTime {
+			if (ts - v) > MonitorExpireTime {
+				fmt.Println("program of platform ", k, " getting sms from mongo is stop: ", time.Unix(v, 0).Format(DateFormat))
+			}
+		}
+
+		for k, v := range sendSmsProgramRunTime {
+			if (ts - v) > MonitorExpireTime {
+				fmt.Println("program of platform ", k, " sending sms from mongo is stop: ", time.Unix(v, 0).Format(DateFormat))
+			}
+		}
+
+		for k, v := range updateSmsProgramRunTime {
+			if (ts - v) > MonitorExpireTime {
+				fmt.Println("program of platform ", k, " updating sms from mongo is stop: ", time.Unix(v, 0).Format(DateFormat))
+			}
 		}
 	}
 }
