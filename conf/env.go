@@ -43,6 +43,13 @@ var mongoSession    		*mgo.Session
 var loggerForLogic 			LogProvider
 var loggerForError 			LogProvider
 
+var ErrorLogStart    = false
+var LogicLogStart    = false
+var MysqlMasterStart = false
+var MysqlSlaveStart  = false
+var RedisMasterStart = false
+var RedisSlaveStart  = false
+var MongoStart 		 = false
 
 
 func init() {
@@ -74,23 +81,20 @@ func start() {
 	/*
 		日志配置，一个是系统级别错误，一个是业务逻辑错误
 	*/
-	fmt.Println("系统错误日志启动......")
 	loggerForError = log4.GetErrorLogger()
-	fmt.Println("逻辑错误日志启动......")
+	ErrorLogStart  = true
 	loggerForLogic = log4.GetLogicLogger()
+	LogicLogStart  = true
 
 	/*
 		启动mysql、redis、mongo配置
 	*/
-	fmt.Println("mysql 主库启动......")
 	SqlMasterDb()
-	fmt.Println("mysql 从库启动......")
 	SqlSlaveDb()
-	fmt.Println("redis 主库启动......")
 	RedisMaster()
-	fmt.Println("redis 从库启动......")
+	RedisMasterStart = true
 	RedisSlave()
-	fmt.Println("mongo 启动......")
+	RedisSlaveStart = true
 	MongoSession()
 }
 
@@ -110,6 +114,8 @@ func SqlMasterDb() *sqlx.DB {
 	if err != nil {
 		loggerForError.LogError("master mysql", fmt.Sprintf("connect error: %s", err.Error()))
 		panic("mysql connect error")
+	} else {
+		MysqlMasterStart = true
 	}
 
 	return db
@@ -123,6 +129,8 @@ func SqlSlaveDb() *sqlx.DB {
 	if err != nil {
 		loggerForError.LogError("slave mysql", fmt.Sprintf("connect error: %s", err.Error()))
 		panic("mysql connect error")
+	} else {
+		MysqlSlaveStart = true
 	}
 
 	return db
@@ -175,6 +183,7 @@ func mongoSessionFactory() *mgo.Session {
 		loggerForError.LogError("mongo", fmt.Sprintf("connect error: %s", err.Error()))
 		panic("mongo connect error")
 	} else {
+		MongoStart = true
 		mongoSession.SetMode(mgo.Eventual, true)
 		return mongoSession
 	}

@@ -1,4 +1,4 @@
-package main
+package sms
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ func main() {
 	var ch = make(chan int)
 
 	go SendProcedure(2)
-	go monitor()
+	go Monitor()
 
 	<-ch
 }

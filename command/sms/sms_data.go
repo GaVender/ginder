@@ -1,4 +1,4 @@
-package main
+package sms
 
 import (
 	"time"
@@ -8,6 +8,7 @@ import (
 	"gopkg.in/redis.v5"
 	"strconv"
 	"ginder/framework/routinepool"
+	"ginder/log/panellog"
 )
 
 const DateFormat				= "2006-01-02 15:04:05"
@@ -73,15 +74,10 @@ type SmsUpdate struct {
 }
 
 
-func init() {
-	t := time.Now().Format(DateFormat)
-	fmt.Println("Sms program start : ", t)
-}
-
 func SendProcedure(platform uint8) {
 	defer func() {
 		if err := recover(); err != nil {
-			fmt.Println("Start send sms whole procedure error and restart: ", err)
+			panellog.SmsPanelLog.Log("panic", "Start send sms whole procedure error and restart: ", err)
 			time.Sleep(time.Second * RecoverSleepTime)
 			SendProcedure(platform)
 		}
@@ -99,7 +95,7 @@ func SendProcedure(platform uint8) {
 func GetDataFromMongo(platform uint8) {
 	defer func() {
 		if err := recover(); err != nil {
-			fmt.Println("get data from mongo error and restart : ", err)
+			panellog.SmsPanelLog.Log("panic", "get data from mongo error and restart: ", err)
 			time.Sleep(time.Second * RecoverSleepTime)
 			GetDataFromMongo(platform)
 		}
@@ -115,7 +111,6 @@ func GetDataFromMongo(platform uint8) {
 		panic("error sms platform: " + strconv.Itoa(int(platform)))
 	}
 
-	fmt.Println("create platform ", platform, " get data goroutine success...")
 	mongo := conf.MongoSession()
 	defer mongo.Close()
 
@@ -129,7 +124,7 @@ func GetDataFromMongo(platform uint8) {
 	beginId, err := getSmsLastSentId(platform, redisObj)
 
 	if err != nil {
-		fmt.Println("platform ", platform, " get sms last id error: ", err.Error())
+		panellog.SmsPanelLog.Log("getSmsError", "platform ", platform, " get sms last id error: ", err.Error())
 	}
 
 	for {
@@ -138,12 +133,12 @@ func GetDataFromMongo(platform uint8) {
 		uuid, err := getUUID(platform, redisObj)
 
 		if err != nil {
-			fmt.Println("platform ", platform, " get uuid error: ", err.Error())
+			panellog.SmsPanelLog.Log("getSmsError", "platform ", platform, " get uuid error: ", err.Error())
 			break
 		}
 
 		if "" == uuid {
-			fmt.Println("platform ", platform, " uuid is empty, sms have sent over")
+			panellog.SmsPanelLog.Log("getSms", "platform ", platform, " uuid is empty, sms have sent over")
 		} else {
 			for {
 				smsList := []SMS{}
@@ -161,14 +156,14 @@ func GetDataFromMongo(platform uint8) {
 				}
 
 				if len(smsList) <= 0 {
-					fmt.Println("platform ", platform, " uuid: ", uuid, " has sent over")
+					panellog.SmsPanelLog.Log("getSms", "platform ", platform, " uuid: ", uuid, " has sent over")
 					break
 				} else {
 					setSmsData(platform, &smsList)
 				}
 
 				setSmsLastSentId(platform, redisObj, beginId)
-				fmt.Println("platform ", platform, " sms: ", smsList)
+				panellog.SmsPanelLog.Log("getSms", "platform ", platform, " sms: ", smsList)
 			}
 		}
 
@@ -246,7 +241,7 @@ func setSmsData(platform uint8, d *[]SMS) {
 			flag = true
 			break
 		default:
-			fmt.Println("platform ", platform, " wait chan is full, can not put in data")
+			panellog.SmsPanelLog.Log("getSms", "platform ", platform, " wait chan is full, can not put in data")
 			time.Sleep(time.Second * SmsWaitListChanSleep)
 		}
 
@@ -259,7 +254,7 @@ func setSmsData(platform uint8, d *[]SMS) {
 func CreateUpdatePool(platform uint8) {
 	defer func() {
 		if err := recover(); err != nil {
-			fmt.Println("update sms pool error and restart : ", err)
+			panellog.SmsPanelLog.Log("panic", "update sms pool error and restart : ", err)
 			time.Sleep(time.Second * RecoverSleepTime)
 			CreateUpdatePool(platform)
 		}
@@ -279,7 +274,7 @@ func CreateUpdatePool(platform uint8) {
 	if err != nil {
 		panic("platform " + strconv.Itoa(int(platform)) + " create pool error: " + err.Error())
 	} else {
-		fmt.Println("create platform ", platform, " update pool success...")
+		panellog.SmsPanelLog.Log("updateSms", "create platform ", platform, " update pool success...")
 	}
 
 	for true {
@@ -295,7 +290,7 @@ func CreateUpdatePool(platform uint8) {
 func UpdateDataToMongo(platform uint8) {
 	defer func() {
 		if err := recover(); err != nil {
-			fmt.Println("update mongo error and restart : ", err)
+			panellog.SmsPanelLog.Log("panic", "update mongo error and restart : ", err)
 			time.Sleep(time.Second * RecoverSleepTime)
 			UpdateDataToMongo(platform)
 		}
@@ -326,47 +321,45 @@ func UpdateDataToMongo(platform uint8) {
 		})
 
 		if err != nil {
-			fmt.Println("platform: ", platform, " ", sms.ID, " update mongo fail：", err.Error())
+			panellog.SmsPanelLog.Log("updateSmsError", "platform: ", platform, " ", sms.ID, " update mongo fail：", err.Error())
 			chanList <- sms
 		} else {
-			fmt.Println("platform: ", platform, " ", sms.ID, " update mongo success")
+			panellog.SmsPanelLog.Log("updateSms", "platform: ", platform, " ", sms.ID, " update mongo success")
 		}
 	}
 }
 
-func monitor() {
+func Monitor() {
 	defer func() {
 		if err := recover(); err != nil {
-			fmt.Println("monitor program error and restart: ", err)
+			panellog.SmsPanelLog.Log("panic", "monitor program error and restart: ", err)
 			time.Sleep(time.Second * RecoverSleepTime)
-			monitor()
+			Monitor()
 		}
 	}()
-
-	fmt.Println("Monitor program start: ", time.Now().Format(DateFormat))
 
 	heartBeat := time.NewTicker(time.Second * MonitorHeartBeatTime)
 	defer heartBeat.Stop()
 
 	for range heartBeat.C {
 		ts := time.Now().Unix()
-		fmt.Println("monitor time: ", time.Unix(ts,0).Format(DateFormat))
+		panellog.SmsPanelLog.Log("monitor", "monitor time")
 
 		for k, v := range getSmsProgramRunTime {
 			if (ts - v) > MonitorExpireTime {
-				fmt.Println("program of platform ", k, " getting sms from mongo is stop: ", time.Unix(v, 0).Format(DateFormat))
+				panellog.SmsPanelLog.Log("monitor", "program of platform ", k, " getting sms from mongo is stop")
 			}
 		}
 
 		for k, v := range sendSmsProgramRunTime {
 			if (ts - v) > MonitorExpireTime {
-				fmt.Println("program of platform ", k, " sending sms is blocking: ", time.Unix(v, 0).Format(DateFormat))
+				panellog.SmsPanelLog.Log("monitor","program of platform ", k, " sending sms is blocking")
 			}
 		}
 
 		for k, v := range updateSmsProgramRunTime {
 			if (ts - v) > MonitorExpireTime {
-				fmt.Println("program of platform ", k, " updating sms to mongo is blocking: ", time.Unix(v, 0).Format(DateFormat))
+				panellog.SmsPanelLog.Log("monitor","program of platform ", k, " updating sms to mongo is blocking")
 			}
 		}
 	}

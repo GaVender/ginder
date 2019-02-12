@@ -1,4 +1,4 @@
-package main
+package sms
 
 import (
 	"net/http"
@@ -15,6 +15,7 @@ import (
 	"os"
 	"strconv"
 	"ginder/framework/routinepool"
+	"ginder/log/panellog"
 )
 
 var MwSmsUrl = os.Getenv("MW_SMS_URL")
@@ -86,7 +87,7 @@ type WlSms struct {}
 func CreateSendPool(platform uint8) {
 	defer func() {
 		if err := recover(); err != nil {
-			fmt.Println("create sms pool error and restart : ", err)
+			panellog.SmsPanelLog.Log("panic", "create sms pool error and restart : ", err)
 			time.Sleep(time.Second * RecoverSleepTime)
 			CreateSendPool(platform)
 		}
@@ -106,7 +107,7 @@ func CreateSendPool(platform uint8) {
 	if err != nil {
 		panic("platform " + strconv.Itoa(int(platform)) + " create pool error: " + err.Error())
 	} else {
-		fmt.Println("create platform ", platform, " send pool success...")
+		panellog.SmsPanelLog.Log("sendSms", "create platform ", platform, " send pool success...")
 	}
 
 	for true {
@@ -122,7 +123,7 @@ func CreateSendPool(platform uint8) {
 func SendSms(platform uint8) {
 	defer func() {
 		if err := recover(); err != nil {
-			fmt.Println("send sms error and restart : ", err)
+			panellog.SmsPanelLog.Log("panic", "send sms error and restart : ", err)
 			time.Sleep(time.Second * RecoverSleepTime)
 			SendSms(platform)
 		}
@@ -151,7 +152,7 @@ func (s *MwSms) send() error {
 		err := s.sendData(&smsList)
 
 		if err != nil {
-			fmt.Println("mw sent error：", err.Error())
+			panellog.SmsPanelLog.Log("sendSmsError", "mw sent error：", err.Error())
 		}
 	}
 
@@ -221,9 +222,9 @@ func (s *MwSms) saveData(b *BatchSms, msgId int64) error {
 
 			select {
 			case mwSentSmsListChan <- sp:
-				fmt.Println("mw sms sent success and put in sent chan：", sp.ID)
+				panellog.SmsPanelLog.Log("sendSms", "mw sms sent success and put in sent chan：", sp.ID)
 			case <- time.After(time.Microsecond * 50):
-				fmt.Println("mw sms sent success but put in sent chan overtime：", sp.ID)
+				panellog.SmsPanelLog.Log("sendSms", "mw sms sent success but put in sent chan overtime：", sp.ID)
 			}
 		}
 	}
@@ -238,7 +239,7 @@ func (s *WlSms) send() error {
 		err := s.sendData(&smsList)
 
 		if err != nil {
-			fmt.Println("wl sent error：", err.Error())
+			panellog.SmsPanelLog.Log("sendSmsError", "wl sent error：", err.Error())
 		}
 	}
 
@@ -310,9 +311,9 @@ func (s *WlSms) saveData(b *BatchSms, msgId string) error {
 
 			select {
 			case wlSentSmsListChan <- sp:
-				fmt.Println("wl sms sent success and put in sent chan：", sp.ID)
+				panellog.SmsPanelLog.Log("sendSms", "wl sms sent success and put in sent chan：", sp.ID)
 			case <- time.After(time.Microsecond * 50):
-				fmt.Println("wl sms sent success but put in sent chan overtime：", sp.ID)
+				panellog.SmsPanelLog.Log("sendSms", "wl sms sent success but put in sent chan overtime：", sp.ID)
 			}
 		}
 	}

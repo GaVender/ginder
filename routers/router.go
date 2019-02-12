@@ -1,11 +1,10 @@
 package routers
 
 import (
-	hHome "ginder/controllers/http/home"
-	rHome "ginder/controllers/rpc/home"
-
 	"github.com/gin-gonic/gin"
-	"github.com/hprose/hprose-golang/rpc"
+	"ginder/controllers/http/monitor"
+	"ginder/command/sms"
+	"github.com/xiaobai22/gokit-service/monitorkit"
 )
 
 // 过滤器
@@ -19,7 +18,7 @@ func init() {
 
 func start() {
 	// route
-	Router = gin.New()
+	/*Router = gin.New()
 
 	Router.Any("/home/user", hHome.PersonalInfo)
 
@@ -30,14 +29,24 @@ func start() {
 	v1 := Router.Group("/v1")
 	{
 		v1.GET("/personalInfo", hHome.PersonalInfo)
-	}
+	}*/
 
 	// rpc
-	service := rpc.NewHTTPService()
+	/*service := rpc.NewHTTPService()
 	service.AddFunction("userInfo", rHome.UserInfo)
 	Router.Any("/home", func(c *gin.Context) {
 		service.ServeHTTP(c.Writer, c.Request)
 	})
 
+	Router.Run(":8080")*/
+
+	go monitorkit.StartMonitorBB("9091", "/black")
+	go sms.Monitor()
+	go sms.SendProcedure(2)
+	go sms.SendProcedure(3)
+
+	gin.SetMode(gin.DebugMode)
+	Router = gin.New()
+	Router.GET("/monitor", monitor.Sms)
 	Router.Run(":8080")
 }
