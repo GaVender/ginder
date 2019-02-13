@@ -9,25 +9,30 @@ import (
 	"time"
 	"crypto/md5"
 	"errors"
-	"gopkg.in/mgo.v2/bson"
-	"github.com/henrylee2cn/mahonia"
 	"net/url"
 	"os"
 	"strconv"
+
 	"ginder/framework/routinepool"
 	"ginder/log/panellog"
+
+	"gopkg.in/mgo.v2/bson"
+	"github.com/henrylee2cn/mahonia"
 )
 
+// 梦网的链接、密码等参数
 var MwSmsUrl = os.Getenv("MW_SMS_URL")
 var MwSmsSp  = os.Getenv("MW_SMS_SP")
 var MwSmsPwd = os.Getenv("MW_SMS_PWD")
 
+// 未来的链接、密码等参数
 var WlSmsUrl = os.Getenv("WL_SMS_URL")
 var WlSmsSp  = os.Getenv("WL_SMS_SP")
 var WlSmsPwd = os.Getenv("WL_SMS_PWD")
 var WlSmsSrc = os.Getenv("WL_SMS_SRCPHONE")
 
 
+// 短信存储在等待chan中的格式，即将发送
 type Sms struct {
 	Id 		bson.ObjectId 	`json:"id"`
 	Phone   string 			`json:"phone"`
@@ -37,6 +42,7 @@ type Sms struct {
 
 type BatchSms []Sms
 
+// 发送短信的interface
 type sender interface {
 	send() error
 	sendData(*[]SMS) error
@@ -84,6 +90,7 @@ type MwSms struct {}
 type WlSms struct {}
 
 
+// 创建发送短信的协程池
 func CreateSendPool(platform uint8) {
 	defer func() {
 		if err := recover(); err != nil {
@@ -111,7 +118,9 @@ func CreateSendPool(platform uint8) {
 	}
 
 	for true {
+		sendSmsProgramLock.Lock()
 		sendSmsProgramRunTime[platform] = time.Now().Unix()
+		sendSmsProgramLock.Unlock()
 
 		pool.Submit(func() error {
 			SendSms(platform)
@@ -120,6 +129,7 @@ func CreateSendPool(platform uint8) {
 	}
 }
 
+// 发送短信的整个过程
 func SendSms(platform uint8) {
 	defer func() {
 		if err := recover(); err != nil {
@@ -182,7 +192,7 @@ func (s *MwSms) sendData(smsList *[]SMS) error {
 		if err := json.Unmarshal(respBody, &r); err != nil {
 			return errors.New("mw response analysis error：" + err.Error())
 		} else {
-			fmt.Println("mw response：", r)
+			panellog.SmsPanelLog.Log("sendSms", "mw response：", r)
 
 			if r.Result != 0 {
 				mwWaitSmsListChan <- *smsList
@@ -193,6 +203,9 @@ func (s *MwSms) sendData(smsList *[]SMS) error {
 		}
 	}
 
+	/*fmt.Println("测试发送")
+	time.Sleep(time.Microsecond * 500)
+	s.saveData(&b, 125698)*/
 	return nil
 }
 

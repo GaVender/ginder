@@ -1,10 +1,12 @@
 package routers
 
 import (
-	"github.com/gin-gonic/gin"
 	"ginder/controllers/http/monitor"
 	"ginder/command/sms"
+
 	"github.com/xiaobai22/gokit-service/monitorkit"
+
+	"github.com/gin-gonic/gin"
 )
 
 // 过滤器
@@ -42,11 +44,11 @@ func start() {
 
 	go monitorkit.StartMonitorBB("9091", "/black")
 	go sms.Monitor()
-	go sms.SendProcedure(2)
-	go sms.SendProcedure(3)
+	go sms.SendProcedure(sms.SmsTypeMw)
+	go sms.SendProcedure(sms.SmsTypeWl)
 
 	gin.SetMode(gin.DebugMode)
 	Router = gin.New()
 	Router.GET("/monitor", monitor.Sms)
-	Router.Run(":8080")
+	Router.Run(":8081")
 }

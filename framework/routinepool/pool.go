@@ -232,7 +232,8 @@ func (p *Pool) monitorAndClear() {
 			p.lock.Unlock()
 			return
 		} else {
-			fmt.Println("worker 个数：", len(workers))
+			var _ = fmt.Println
+			//fmt.Println("worker 个数：", len(workers))
 		}
 
 		n := 0

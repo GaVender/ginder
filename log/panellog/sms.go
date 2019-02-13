@@ -18,9 +18,6 @@ func init() {
 	SmsPanelLog.SetLogReadme("updateSms", "更改短信")
 	SmsPanelLog.SetLogReadme("updateSmsError", "更改短信出错")
 
-	//SmsPanelLog.InitCounterKit("back")
-	//SmsPanelLog.InitTimerKit("mongo")
-
 	SmsPanelLog.SetNoPrintToConsole(true)
 	SmsPanelLog.Ready()
 }
