@@ -177,35 +177,38 @@ func (s *MwSms) sendData(smsList *[]SMS) error {
 		b = append(b, Sms{Id: v.ID, Phone: v.Phone, Content: url.QueryEscape(enc.ConvertString(v.Content)), UUID: v.UUID})
 	}
 
-	resp, err := http.Post(MwSmsUrl, "application/json", strings.NewReader(s.dealData(&b)))
-
-	if err != nil{
-		return errors.New("mw interface error：" + err.Error())
-	} else {
-		r := MwResp{}
-		respBody, err := ioutil.ReadAll(resp.Body)
+	if "pro" == os.Getenv("ENV") {
+		resp, err := http.Post(MwSmsUrl, "application/json", strings.NewReader(s.dealData(&b)))
 
 		if err != nil {
-			return errors.New("mw response error：" + err.Error())
-		}
-
-		if err := json.Unmarshal(respBody, &r); err != nil {
-			return errors.New("mw response analysis error：" + err.Error())
+			return errors.New("mw interface error：" + err.Error())
 		} else {
-			panellog.SmsPanelLog.Log("sendSms", "mw response：", r)
+			r := MwResp{}
+			respBody, err := ioutil.ReadAll(resp.Body)
 
-			if r.Result != 0 {
-				mwWaitSmsListChan <- *smsList
-				return errors.New(fmt.Sprintf("mw sent error：%d", r.Result))
+			if err != nil {
+				return errors.New("mw response error：" + err.Error())
+			}
+
+			if err := json.Unmarshal(respBody, &r); err != nil {
+				return errors.New("mw response analysis error：" + err.Error())
 			} else {
-				s.saveData(&b, r.MsgId)
+				panellog.SmsPanelLog.Log("sendSms", "mw response：", r)
+
+				if r.Result != 0 {
+					mwWaitSmsListChan <- *smsList
+					return errors.New(fmt.Sprintf("mw sent error：%d", r.Result))
+				} else {
+					s.saveData(&b, r.MsgId)
+				}
 			}
 		}
+	} else {
+		fmt.Println("测试发送")
+		time.Sleep(time.Microsecond * 500)
+		s.saveData(&b, 125698)
 	}
 
-	/*fmt.Println("测试发送")
-	time.Sleep(time.Microsecond * 500)
-	s.saveData(&b, 125698)*/
 	return nil
 }
 
