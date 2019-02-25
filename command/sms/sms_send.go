@@ -83,8 +83,6 @@ type WlSmsMsg struct {
 	Context string `json:"context"`
 }
 
-type WlResp string
-
 type MwSms struct {}
 
 type WlSms struct {}
@@ -204,9 +202,9 @@ func (s *MwSms) sendData(smsList *[]SMS) error {
 			}
 		}
 	} else {
-		fmt.Println("测试发送")
+		fmt.Println("梦网测试发送")
 		time.Sleep(time.Microsecond * 500)
-		s.saveData(&b, 125698)
+		s.saveData(&b, 212345)
 	}
 
 	return nil
@@ -269,31 +267,50 @@ func (s *WlSms) sendData(smsList *[]SMS) error {
 		b = append(b, Sms{Id: v.ID, Phone: v.Phone, Content: v.Content, UUID: v.UUID})
 	}
 
-	resp, err := http.Post(WlSmsUrl, "application/json", strings.NewReader(s.dealData(&b)))
-
-	if err != nil{
-		return errors.New("wl interface error：" + err.Error())
-	} else {
-		//var r WlResp
-		respBody, err := ioutil.ReadAll(resp.Body)
+	if "pro" == os.Getenv("ENV") {
+		resp, err := http.Post(WlSmsUrl, "application/x-www-form-urlencoded", strings.NewReader(s.dealData(&b)))
 
 		if err != nil {
-			return errors.New("wl response error：" + err.Error())
-		}
-fmt.Println(url.QueryUnescape(string(respBody)))
-return nil
-		/*if err := json.Unmarshal(respBody, &r); err != nil {
-			return errors.New("wl response analysis error：" + err.Error())
+			return errors.New("wl interface error：" + err.Error())
 		} else {
-			fmt.Println("wl response：", r)
+			var r string
+			respBody, err := ioutil.ReadAll(resp.Body)
 
-			if r.ID != 0 {
-				//mwWaitSmsListChan <- *smsList
-				return errors.New(fmt.Sprintf("wl sent error：%d", r))
-			} else {
-				//s.saveData(&b, r.MsgId)
+			if err != nil {
+				return errors.New("wl response error：" + err.Error())
 			}
-		}*/
+
+			r = string(respBody)
+
+			if !strings.Contains(r, ",") {
+				return errors.New("wl response analysis error：" + r)
+			} else {
+				panellog.SmsPanelLog.Log("sendSms", "wl response：", r)
+
+				rArray := strings.FieldsFunc(r, func(e rune) bool {
+					if e == ',' {
+						return true
+					} else {
+						return false
+					}
+				})
+
+				if len(rArray) == 2 {
+					if rArray[0] == "0" {
+						s.saveData(&b, rArray[1])
+					} else {
+						wlWaitSmsListChan <- *smsList
+						return errors.New(fmt.Sprintf("wl sent error：%s", rArray[0]))
+					}
+				} else {
+					return errors.New(fmt.Sprintf("wl sent error：%s", r))
+				}
+			}
+		}
+	} else {
+		fmt.Println("未来测试发送")
+		time.Sleep(time.Microsecond * 500)
+		s.saveData(&b, "312345")
 	}
 
 	return nil
@@ -309,14 +326,11 @@ func (s *WlSms) dealData(b *BatchSms) string {
 
 	msgByte, _ := json.Marshal(msg)
 	msgStr := string(msgByte)
-	msgStr = strings.Replace(msgStr, "\"", "&quot;", -1)
 	msgStr = strings.ToLower(url.QueryEscape(msgStr))
 
 	sign := msgStr + WlSmsPwd
 	sign = fmt.Sprintf("%x", md5.Sum([]byte(sign)))
-	param := WlSmsStruct{Uid: WlSmsSp, Sign: sign, Srcphone: WlSmsSrc, Msg: msgStr}
-	data, _ := json.Marshal(param)
-	fmt.Println(string(data))
+	data := "uid=" + WlSmsSp + "&srcphone=" + WlSmsSrc + "&msg=" + msgStr + "&sign=" + sign
 	return string(data)
 }
 
