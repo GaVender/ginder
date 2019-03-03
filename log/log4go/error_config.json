@@ -6,7 +6,7 @@
   "files": [{
     "enable": true,
     "level": "FINE",
-    "filename":"/home/wwwlogs/go/api.sms/error.log",
+    "filename":"/home/wwwlogs/go/ginder/error.log",
     "category": "ErrorLog",
     "pattern": "[%D %T] [%C] [%L] (%S) %M",
     "rotate": true,

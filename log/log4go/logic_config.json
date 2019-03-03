@@ -6,7 +6,7 @@
   "files": [{
     "enable": true,
     "level": "FINE",
-    "filename":"/home/wwwlogs/api.sms/logic.log",
+    "filename":"/home/wwwlogs/ginder/logic.log",
     "category": "LogicLog",
     "pattern": "[%D %T] [%C] [%L] (%S) %M",
     "rotate": true,

@@ -49,5 +49,5 @@ func start() {
 	gin.SetMode(gin.DebugMode)
 	Router = gin.New()
 	Router.GET("/monitor", monitor.Sms)
-	Router.Run(":80")
+	Router.Run(":8081")
 }
