@@ -13,8 +13,8 @@ import (
 	"os"
 	"strconv"
 
-	"ginder/framework/routinepool"
-	"ginder/log/panellog"
+	"github.com/GaVender/ginder/framework/routinepool"
+	"github.com/GaVender/ginder/log/panellog"
 
 	"gopkg.in/mgo.v2/bson"
 	"github.com/henrylee2cn/mahonia"
@@ -175,7 +175,7 @@ func (s *MwSms) sendData(smsList *[]SMS) error {
 		b = append(b, Sms{Id: v.ID, Phone: v.Phone, Content: url.QueryEscape(enc.ConvertString(v.Content)), UUID: v.UUID})
 	}
 
-	if "pro" == os.Getenv("ENV") {
+	if "pro" == strings.TrimSpace(os.Getenv("ENV")) {
 		resp, err := http.Post(MwSmsUrl, "application/json", strings.NewReader(s.dealData(&b)))
 
 		if err != nil {
@@ -267,7 +267,7 @@ func (s *WlSms) sendData(smsList *[]SMS) error {
 		b = append(b, Sms{Id: v.ID, Phone: v.Phone, Content: v.Content, UUID: v.UUID})
 	}
 
-	if "pro" == os.Getenv("ENV") {
+	if "pro" == strings.TrimSpace(os.Getenv("ENV")) {
 		resp, err := http.Post(WlSmsUrl, "application/x-www-form-urlencoded", strings.NewReader(s.dealData(&b)))
 
 		if err != nil {

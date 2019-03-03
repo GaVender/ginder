@@ -3,7 +3,7 @@ package home
 import (
 	"net/http"
 
-	"ginder/controllers"
+	"github.com/GaVender/ginder/controllers"
 
 	"github.com/gin-gonic/gin"
 )

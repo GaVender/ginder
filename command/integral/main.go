@@ -1,17 +1,19 @@
 package main
 
 import (
-	"ginder/conf"
 	"fmt"
 	"encoding/json"
 	"time"
 	"strconv"
 	"os"
-	"gopkg.in/redis.v5"
-	"github.com/jmoiron/sqlx"
 	"sync/atomic"
 	"sync"
 	"math/rand"
+
+	"github.com/GaVender/ginder/conf"
+
+	"gopkg.in/redis.v5"
+	"github.com/jmoiron/sqlx"
 )
 
 const DealIdRedisKEY  = "string:integral_expire_deal_id"

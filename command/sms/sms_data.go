@@ -4,14 +4,14 @@ import (
 	"time"
 	"fmt"
 	"strconv"
+	"sync"
 
-	"ginder/conf"
-	"ginder/framework/routinepool"
-	"ginder/log/panellog"
+	"github.com/GaVender/ginder/conf"
+	"github.com/GaVender/ginder/framework/routinepool"
+	"github.com/GaVender/ginder/log/panellog"
 
 	"gopkg.in/mgo.v2/bson"
 	"gopkg.in/redis.v5"
-	"sync"
 )
 
 const DateFormat				= "2006-01-02 15:04:05"

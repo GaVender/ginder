@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"io/ioutil"
 
-	"ginder/conf"
+	"gitlab.etcchebao.cn/go_service/api.sms/conf"
 
 	"github.com/gin-gonic/gin"
 )

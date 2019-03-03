@@ -5,12 +5,11 @@ import (
 	"strings"
 	"os"
 	"time"
-	"strconv"
 
-	log4 "ginder/log/log4go"
+	log4 "github.com/GaVender/ginder/log/log4go"
 
 	"github.com/jmoiron/sqlx"
-	_"github.com/go-sql-driver/mysql"
+	_ "github.com/go-sql-driver/mysql"
 	"gopkg.in/redis.v5"
 	"gopkg.in/mgo.v2"
 )
@@ -60,23 +59,23 @@ func start() {
 	/*
 		参数初始化
 	*/
-	mysqlMasterHost	  	= strings.TrimSpace(os.Getenv("MYSQL_MASTER_HOST"))
-	mysqlSlaveHost 	  	= strings.TrimSpace(os.Getenv("MYSQL_SLAVE_HOST"))
-	mysqlPort 		  	= strings.TrimSpace(os.Getenv("MYSQL_PORT"))
-	mysqlUsername 	  	= strings.TrimSpace(os.Getenv("MYSQL_USERNAME"))
-	mysqlPwd 		  	= strings.TrimSpace(os.Getenv("MYSQL_PASSWORD"))
-	mysqlDb 		  	= strings.TrimSpace(os.Getenv("MYSQL_DB"))
-	redisMasterHost   	= strings.TrimSpace(os.Getenv("REDIS_MASTER_HOST"))
-	redisSlaveHost 	  	= strings.TrimSpace(os.Getenv("REDIS_SLAVE_HOST"))
-	redisPort 		  	= strings.TrimSpace(os.Getenv("REDIS_PORT"))
-	redisPwd 		  	= strings.TrimSpace(os.Getenv("REDIS_PASSWORD"))
-	redisDb, _ 		  	= strconv.Atoi(os.Getenv("REDIS_DB"))
-	redisPoolSize, _  	= strconv.Atoi(os.Getenv("REDIS_POOL_SIZE"))
-	mongoHost 		  	= []string{strings.TrimSpace(os.Getenv("MONGO_HOST"))}
+	mysqlMasterHost	  	= strings.TrimSpace(os.Getenv("MYSQL_ETC1_MASTER_HOST"))
+	mysqlSlaveHost 	  	= strings.TrimSpace(os.Getenv("MYSQL_ETC1_MASTER_HOST"))
+	mysqlPort 		  	= strings.TrimSpace(os.Getenv("MYSQL_ETC1_PORT"))
+	mysqlUsername 	  	= strings.TrimSpace(os.Getenv("MYSQL_ETC1_USERNAME"))
+	mysqlPwd 		  	= strings.TrimSpace(os.Getenv("MYSQL_ETC1_PASSWORD"))
+	mysqlDb 		  	= "chebao"
+	redisMasterHost   	= strings.TrimSpace(os.Getenv("REDIS_ETC1_HOST"))
+	redisSlaveHost 	  	= strings.TrimSpace(os.Getenv("REDIS_ETC1_HOST"))
+	redisPort 		  	= strings.TrimSpace(os.Getenv("REDIS_ETC1_PORT"))
+	redisPwd 		  	= strings.TrimSpace(os.Getenv("REDIS_ETC1_PASSWORD"))
+	redisDb		  		= 0
+	redisPoolSize	  	= 20
+	mongoHost 		  	= []string{strings.TrimSpace(strings.TrimSpace(os.Getenv("MONGO_HOST")) + ":" + strings.TrimSpace(os.Getenv("MONGO_PORT")))}
 	mongoUser 		  	= strings.TrimSpace(os.Getenv("MONGO_USER"))
-	mongoPwd 		  	= strings.TrimSpace(os.Getenv("MONGO_PASSWORD"))
-	mongoTimeout, _   	= strconv.Atoi(os.Getenv("MONGO_TIMEOUT"))
-	mongoPoolLimit, _	= strconv.Atoi(os.Getenv("MONGO_POOL_LIMIT"))
+	mongoPwd 		  	= strings.TrimSpace(os.Getenv("MONGO_PASSWD"))
+	mongoTimeout	   	= 1
+	mongoPoolLimit		= 20
 
 	/*
 		日志配置，一个是系统级别错误，一个是业务逻辑错误

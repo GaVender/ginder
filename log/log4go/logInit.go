@@ -11,10 +11,11 @@ type Log4Go struct {
 	logger log.Logger
 }
 
-var logForLogic Log4Go
 var logForError Log4Go
+var logForLogic Log4Go
 
 func init() {
+	// 创建目录或文件的没改
 	logError := strings.TrimSpace(os.Getenv("LOG_ERROR"))  // 放置非业务代码的错误的log路径
 	logLogic := strings.TrimSpace(os.Getenv("LOG_LOGIC"))  // 放置代码逻辑错误、运行参数、结果等的log路径
 
@@ -22,13 +23,13 @@ func init() {
 		panic("日志路径未设置")
 	}
 
-	loggerError := log.NewDefaultLogger(log.FINE)
-	loggerError.AddFilter("file", log.FINE, log.NewFileLogWriter(logError, true, true))
-	logForError = Log4Go{loggerError}
+	errorLog := log.NewDefaultLogger(log.FINE)
+	errorLog.LoadJsonConfiguration("./log/log4go/error_config.json")
+	logForError = Log4Go{errorLog}
 
-	loggerLogic := log.NewDefaultLogger(log.FINE)
-	loggerLogic.AddFilter("file", log.FINE, log.NewFileLogWriter(logLogic, true, true))
-	logForLogic = Log4Go{loggerLogic}
+	logicLog := log.NewDefaultLogger(log.FINE)
+	logicLog.LoadJsonConfiguration("./log/log4go/logic_config.json")
+	logForLogic = Log4Go{logicLog}
 }
 
 func GetErrorLogger() Log4Go {

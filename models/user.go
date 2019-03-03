@@ -1,12 +1,13 @@
 package models
 
 import (
-	"ginder/conf"
 	"crypto/md5"
 	"fmt"
 	"strings"
 	"database/sql"
 	"time"
+
+	"github.com/GaVender/ginder/conf"
 )
 
 const PWD_ENCRYPT_PREFIX = "linge"

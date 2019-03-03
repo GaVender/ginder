@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"time"
 
-	"ginder/controllers"
-	"ginder/models"
-	"ginder/conf"
+	"github.com/GaVender/ginder/controllers"
+	"github.com/GaVender/ginder/models"
+	"github.com/GaVender/ginder/conf"
 
 	"github.com/gin-gonic/gin"
 )

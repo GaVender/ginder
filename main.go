@@ -1,8 +1,9 @@
 package main
 
 import (
-	_ "ginder/routers"
+	_ "github.com/GaVender/ginder/routers"
 )
 
 func main() {
+
 }
