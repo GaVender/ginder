@@ -185,9 +185,9 @@ func (p *Pool) getWorker() *Worker {
 		<- p.free
 		p.lock.Lock()
 
+		l := len(p.workers) - 1
+		w = p.workers[l]
 		workers = p.workers
-		l := len(workers) - 1
-		w = workers[l]
 		workers[l] = nil
 		p.workers = workers[:l]
 

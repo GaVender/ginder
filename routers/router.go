@@ -30,10 +30,10 @@ func start() {
 	v1 := Router.Group("/v1")
 	{
 		v1.GET("/personalInfo", hHome.PersonalInfo)
-	}*/
+	}
 
 	// rpc
-	/*service := rpc.NewHTTPService()
+	service := rpc.NewHTTPService()
 	service.AddFunction("userInfo", rHome.UserInfo)
 	Router.Any("/home", func(c *gin.Context) {
 		service.ServeHTTP(c.Writer, c.Request)
