@@ -2,16 +2,16 @@ package conf
 
 import (
 	"fmt"
-	"strings"
 	"os"
+	"strings"
 	"time"
 
 	log4 "github.com/GaVender/ginder/log/log4go"
 
-	"github.com/jmoiron/sqlx"
 	_ "github.com/go-sql-driver/mysql"
-	"gopkg.in/redis.v5"
+	"github.com/jmoiron/sqlx"
 	"gopkg.in/mgo.v2"
+	"gopkg.in/redis.v5"
 )
 
 type LogProvider interface {
