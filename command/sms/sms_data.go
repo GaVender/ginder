@@ -1,10 +1,10 @@
 package sms
 
 import (
-	"time"
 	"fmt"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/GaVender/ginder/conf"
 	"github.com/GaVender/ginder/framework/routinepool"
@@ -121,11 +121,10 @@ func GetDataFromMongo(platform uint8) {
 		panic("error sms platform: " + strconv.Itoa(int(platform)))
 	}
 
-	mongo := conf.MongoSession()
+	mongo := conf.GetMongoSession()
 	defer mongo.Close()
 
-	redisObj := conf.RedisMaster()
-	defer redisObj.Close()
+	redisObj := conf.GetMasterRedis()
 
 	ts  := time.Now().Format("200601")
 	con := mongo.DB(MongoDatabase).C(MongoCollection + ts)
@@ -329,7 +328,7 @@ func UpdateDataToMongo(platform uint8) {
 	sms := <- chanList
 
 	if sms.ID != "" {
-		mongo := conf.MongoSession()
+		mongo := conf.GetMongoSession()
 		defer mongo.Close()
 
 		ts  := time.Now().Format("200601")

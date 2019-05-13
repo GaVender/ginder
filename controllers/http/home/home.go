@@ -1,16 +1,16 @@
 package home
 
 import (
-	"net/http"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/GaVender/ginder/conf"
 	"github.com/GaVender/ginder/controllers"
 
 	"github.com/gin-gonic/gin"
-	"gopkg.in/mgo.v2/bson"
 	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 )
 
 type homeOutput struct {
@@ -27,7 +27,7 @@ func Home(c *gin.Context) {
 	if userInfo.Username == "" {
 		controllers.ThrowError(c, -1, "登录超时，请重新登录")
 	} else {
-		mongoSession := conf.MongoSession()
+		mongoSession := conf.GetMongoSession()
 		defer mongoSession.Close()
 
 		con := mongoSession.DB("passport").C("home_info")

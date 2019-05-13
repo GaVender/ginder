@@ -38,9 +38,13 @@ func (l Log4Go) LogInfo(head, content string) {
 }
 
 func (l Log4Go) LogWarn(head, content string) {
-	l.logger.Warn(head + " | " + content)
+	if err := l.logger.Warn(head + " | " + content); err != nil {
+		l.logger.Info("warn", "log warn error: " + err.Error())
+	}
 }
 
 func (l Log4Go) LogError(head, content string) {
-	l.logger.Error(head + " | " + content)
+	if err := l.logger.Error(head + " | " + content); err != nil {
+		l.logger.Info("error", "log error error: " + err.Error())
+	}
 }

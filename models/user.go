@@ -2,15 +2,15 @@ package models
 
 import (
 	"crypto/md5"
+	"database/sql"
 	"fmt"
 	"strings"
-	"database/sql"
 	"time"
 
 	"github.com/GaVender/ginder/conf"
 )
 
-const PWD_ENCRYPT_PREFIX = "linge"
+const PwdEncryptPrefix = "linge"
 
 type User struct {
 	Id 			   int64  `db:"id" json:"id"`
@@ -37,8 +37,7 @@ type UserLogin struct {
 
 
 func (u *UserLogin) IsExists() int8 {
-	db := conf.SqlSlaveDb()
-	defer db.Close()
+	db := conf.GetSlaveMysql()
 
 	var flag int8 = -1
 	var user User
@@ -61,8 +60,7 @@ func (u *UserLogin) IsExists() int8 {
 }
 
 func (u *UserLogin) Register() (sql.Result, error) {
-	db := conf.SqlMasterDb()
-	defer db.Close()
+	db := conf.GetMasterMysql()
 
 	query := "insert into passport.user(username, password) values(?, ?);"
 	return db.Exec(query, u.Username, u.EncryptPassword())
@@ -71,15 +69,14 @@ func (u *UserLogin) Register() (sql.Result, error) {
 func (u *UserLogin) UserInfo() *User {
 	user := User{}
 
-	db := conf.SqlSlaveDb()
-	defer db.Close()
-	db.Get(&user, "select id, username, password from passport.user where username = ?", u.Username)
+	db := conf.GetSlaveMysql()
+	_ = db.Get(&user, "select id, username, password from passport.user where username = ?", u.Username)
 	return &user
 }
 
 func (u *UserLogin) EncryptPassword() string {
 	if u.Password != "" {
-		pwd := fmt.Sprintf("%s_%s", PWD_ENCRYPT_PREFIX, u.Password)
+		pwd := fmt.Sprintf("%s_%s", PwdEncryptPrefix, u.Password)
 		return fmt.Sprintf("%x", md5.Sum([]byte(pwd)))
 	} else {
 		return ""
@@ -88,7 +85,7 @@ func (u *UserLogin) EncryptPassword() string {
 
 func (u *UserLogin) CreateUserToken() string {
 	if u.Username != "" {
-		token := fmt.Sprintf("%s_%s_%s", PWD_ENCRYPT_PREFIX, u.Username, time.Now().Unix())
+		token := fmt.Sprintf("%s_%s_%s", PwdEncryptPrefix, u.Username, time.Now().Unix())
 		return fmt.Sprintf("%x", md5.Sum([]byte(token)))
 	} else {
 		return ""

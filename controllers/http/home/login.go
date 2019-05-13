@@ -1,13 +1,13 @@
 package home
 
 import (
-	"net/http"
 	"encoding/json"
+	"net/http"
 	"time"
 
+	"github.com/GaVender/ginder/conf"
 	"github.com/GaVender/ginder/controllers"
 	"github.com/GaVender/ginder/models"
-	"github.com/GaVender/ginder/conf"
 
 	"github.com/gin-gonic/gin"
 )
@@ -110,7 +110,7 @@ func Register(c *gin.Context) {
 
 func GetUserInfoRedisDataByUsername(username string) *models.UserInfoRedis {
 	u := models.UserInfoRedis{}
-	redis := conf.RedisSlave()
+	redis := conf.GetMasterRedis()
 	ret := redis.Get(USERNAME_USER_INFO_REDIS + username)
 
 	if ret.Err() != nil {
@@ -123,7 +123,7 @@ func GetUserInfoRedisDataByUsername(username string) *models.UserInfoRedis {
 
 func GetUserInfoRedisDataByToken(token string) *models.UserInfoRedis {
 	u := models.UserInfoRedis{}
-	redis := conf.RedisSlave()
+	redis := conf.GetMasterRedis()
 	ret := redis.Get(TOKEN_USER_INFO_REDIS + token)
 
 	if ret.Err() == nil {

@@ -4,7 +4,7 @@
     "level": "FINE"
   },
   "files": [{
-    "enable": true,
+    "enable": false,
     "level": "FINE",
     "filename":"/home/wwwlogs/ginder/logic.log",
     "category": "LogicLog",
