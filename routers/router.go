@@ -5,6 +5,7 @@ import (
 
 	"github.com/GaVender/ginder/conf"
 	"github.com/GaVender/ginder/controllers/http/home"
+	"github.com/GaVender/ginder/controllers/http/monitor"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hprose/hprose-golang/rpc"
@@ -45,7 +46,7 @@ func init() {
 
 	v1 := Router.Group("/v1")
 	{
-		v1.GET("/personalInfo", home.PersonalInfo)
+		v1.GET("/sms", monitor.Sms)
 	}
 
 	// rpc

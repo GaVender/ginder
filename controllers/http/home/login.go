@@ -146,7 +146,7 @@ func createUserInfoRedisData(token string, uid int64, u *models.UserLogin) *mode
 
 func saveUserInfoRedis(token string, username string, u *models.UserInfoRedis) {
 	uJson, _ := json.Marshal(*u)
-	redis := conf.RedisMaster()
+	redis := conf.GetMasterRedis()
 	redis.Set(TOKEN_USER_INFO_REDIS + token, string(uJson), USER_INFO_REDIS_TIME)
 	redis.Set(USERNAME_USER_INFO_REDIS + username, string(uJson), USER_INFO_REDIS_TIME)
 }
