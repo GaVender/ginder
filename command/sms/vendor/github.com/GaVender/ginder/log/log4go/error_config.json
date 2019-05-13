@@ -1,0 +1,25 @@
+{
+  "console": {
+    "enable": true,
+    "level": "FINE"
+  },
+  "files": [{
+    "enable": false,
+    "level": "FINE",
+    "filename":"/home/wwwlogs/go/ginder/error.log",
+    "category": "ErrorLog",
+    "pattern": "[%D %T] [%C] [%L] (%S) %M",
+    "rotate": true,
+    "maxsize": "500M",
+    "maxlines": "10K",
+    "daily": true
+  }],
+  "sockets": [{
+    "enable": false,
+    "level": "DEBUG",
+    "category": "TestSocket",
+    "pattern": "[%D %T] [%C] [%L] (%S) %M",
+    "addr": "127.0.0.1:12124",
+    "protocol":"udp"
+  }]
+}

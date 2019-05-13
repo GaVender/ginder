@@ -1,0 +1,113 @@
+{
+	"ImportPath": "github.com/GaVender/ginder/command/sms",
+	"GoVersion": "go1.12",
+	"GodepVersion": "v80",
+	"Deps": [
+		{
+			"ImportPath": "github.com/GaVender/ginder/conf",
+			"Rev": "a5dca14282ca50ef94a6bfc6ff0676971b56385c"
+		},
+		{
+			"ImportPath": "github.com/GaVender/ginder/framework/routinepool",
+			"Rev": "a5dca14282ca50ef94a6bfc6ff0676971b56385c"
+		},
+		{
+			"ImportPath": "github.com/GaVender/ginder/log/log4go",
+			"Rev": "a5dca14282ca50ef94a6bfc6ff0676971b56385c"
+		},
+		{
+			"ImportPath": "github.com/GaVender/ginder/log/panellog",
+			"Rev": "a5dca14282ca50ef94a6bfc6ff0676971b56385c"
+		},
+		{
+			"ImportPath": "github.com/go-sql-driver/mysql",
+			"Comment": "v1.4.0-30-g877a977",
+			"Rev": "877a9775f06853f611fb2d4e817d92479242d1cd"
+		},
+		{
+			"ImportPath": "github.com/henrylee2cn/mahonia",
+			"Rev": "be6deb105fbcf9b67ea9d7cc73fd50e2d629179f"
+		},
+		{
+			"ImportPath": "github.com/jeanphorn/log4go",
+			"Rev": "7df3c8baac7d7dd6b24d0c5aff571cec9186ad68"
+		},
+		{
+			"ImportPath": "github.com/jmoiron/sqlx",
+			"Comment": "v1.2.0-21-g38398a3",
+			"Rev": "38398a30ed8516ffda617a04c822de09df8a3ec5"
+		},
+		{
+			"ImportPath": "github.com/jmoiron/sqlx/reflectx",
+			"Comment": "v1.2.0-21-g38398a3",
+			"Rev": "38398a30ed8516ffda617a04c822de09df8a3ec5"
+		},
+		{
+			"ImportPath": "github.com/toolkits/file",
+			"Rev": "a5b3c5147e07f934d9f9d00b901a20b2529f1a57"
+		},
+		{
+			"ImportPath": "github.com/xiaobai22/gokit-service/blackboardkit",
+			"Rev": "69fe22c79a0c860eae0213fa9d23c00b35a97b7f"
+		},
+		{
+			"ImportPath": "github.com/xiaobai22/gokit-service/kits",
+			"Rev": "69fe22c79a0c860eae0213fa9d23c00b35a97b7f"
+		},
+		{
+			"ImportPath": "gopkg.in/mgo.v2",
+			"Comment": "r2016.08.01-7-g9856a29",
+			"Rev": "9856a29383ce1c59f308dd1cf0363a79b5bef6b5"
+		},
+		{
+			"ImportPath": "gopkg.in/mgo.v2/bson",
+			"Comment": "r2016.08.01-7-g9856a29",
+			"Rev": "9856a29383ce1c59f308dd1cf0363a79b5bef6b5"
+		},
+		{
+			"ImportPath": "gopkg.in/mgo.v2/internal/json",
+			"Comment": "r2016.08.01-7-g9856a29",
+			"Rev": "9856a29383ce1c59f308dd1cf0363a79b5bef6b5"
+		},
+		{
+			"ImportPath": "gopkg.in/mgo.v2/internal/sasl",
+			"Comment": "r2016.08.01-7-g9856a29",
+			"Rev": "9856a29383ce1c59f308dd1cf0363a79b5bef6b5"
+		},
+		{
+			"ImportPath": "gopkg.in/mgo.v2/internal/scram",
+			"Comment": "r2016.08.01-7-g9856a29",
+			"Rev": "9856a29383ce1c59f308dd1cf0363a79b5bef6b5"
+		},
+		{
+			"ImportPath": "gopkg.in/redis.v5",
+			"Comment": "v5.2.9",
+			"Rev": "a16aeec10ff407b1e7be6dd35797ccf5426ef0f0"
+		},
+		{
+			"ImportPath": "gopkg.in/redis.v5/internal",
+			"Comment": "v5.2.9",
+			"Rev": "a16aeec10ff407b1e7be6dd35797ccf5426ef0f0"
+		},
+		{
+			"ImportPath": "gopkg.in/redis.v5/internal/consistenthash",
+			"Comment": "v5.2.9",
+			"Rev": "a16aeec10ff407b1e7be6dd35797ccf5426ef0f0"
+		},
+		{
+			"ImportPath": "gopkg.in/redis.v5/internal/hashtag",
+			"Comment": "v5.2.9",
+			"Rev": "a16aeec10ff407b1e7be6dd35797ccf5426ef0f0"
+		},
+		{
+			"ImportPath": "gopkg.in/redis.v5/internal/pool",
+			"Comment": "v5.2.9",
+			"Rev": "a16aeec10ff407b1e7be6dd35797ccf5426ef0f0"
+		},
+		{
+			"ImportPath": "gopkg.in/redis.v5/internal/proto",
+			"Comment": "v5.2.9",
+			"Rev": "a16aeec10ff407b1e7be6dd35797ccf5426ef0f0"
+		}
+	]
+}
