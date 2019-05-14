@@ -35,7 +35,7 @@ var (
 	mysqlPort 	      		string
 	mysqlUsername    		string
 	mysqlPwd	  			string
-	mysqlDb		  			string
+	mysqlDB		  			string
 	redisMasterHost 		string
 	redisSlaveHost  		string
 	redisPort		  		string
@@ -45,6 +45,7 @@ var (
 	mongoHost 				[]string
 	mongoUser				string
 	mongoPwd				string
+	mongoDB					string
 	mongoTimeout			int
 	mongoPoolLimit			int
 	loggerForLogic 			LogProvider
@@ -67,16 +68,17 @@ func init() {
 	mysqlPort 		  	= strings.TrimSpace(os.Getenv("MYSQL_PORT"))
 	mysqlUsername 	  	= strings.TrimSpace(os.Getenv("MYSQL_USERNAME"))
 	mysqlPwd 		  	= strings.TrimSpace(os.Getenv("MYSQL_PASSWORD"))
-	mysqlDb 		  	= strings.TrimSpace(os.Getenv("MYSQL_DB"))
+	mysqlDB 		  	= strings.TrimSpace(os.Getenv("MYSQL_DB"))
 	redisMasterHost   	= strings.TrimSpace(os.Getenv("REDIS_HOST"))
 	redisSlaveHost 	  	= strings.TrimSpace(os.Getenv("REDIS_HOST"))
 	redisPort 		  	= strings.TrimSpace(os.Getenv("REDIS_PORT"))
 	redisPwd 		  	= strings.TrimSpace(os.Getenv("REDIS_PASSWORD"))
 	redisDb		  		= 0
 	redisPoolSize	  	= 20
-	mongoHost 		  	= []string{strings.TrimSpace(strings.TrimSpace(os.Getenv("MONGO_HOST")) + ":" + strings.TrimSpace(os.Getenv("MONGO_PORT")))}
+	mongoHost 		  	= []string{strings.TrimSpace(os.Getenv("MONGO_HOST"))}
 	mongoUser 		  	= strings.TrimSpace(os.Getenv("MONGO_USER"))
 	mongoPwd 		  	= strings.TrimSpace(os.Getenv("MONGO_PASSWORD"))
+	mongoDB				= strings.TrimSpace(os.Getenv("MONGO_DB"))
 	mongoTimeout	   	= 1
 	mongoPoolLimit		= 20
 
@@ -122,7 +124,7 @@ func mysqlFactory(host string) *sqlx.DB {
 	}
 
 	dns := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8", mysqlUsername, mysqlPwd,
-		host, mysqlPort, mysqlDb)
+		host, mysqlPort, mysqlDB)
 	db, err := sqlx.Connect("mysql", dns)
 
 	if err != nil {
@@ -223,6 +225,7 @@ func mongoSessionFactory() {
 		Addrs:     mongoHost,
 		Username:  mongoUser,
 		Password:  mongoPwd,
+		Database:  mongoDB,
 		Timeout:   time.Second * time.Duration(mongoTimeout),
 		Direct:    false,
 		PoolLimit: mongoPoolLimit,
@@ -232,7 +235,7 @@ func mongoSessionFactory() {
 
 	if err != nil {
 		loggerForError.LogError("mongo", fmt.Sprintf("connect error: %s", err.Error()))
-		panic("mongo connect error")
+		panic("mongo connect error: " + err.Error())
 	} else {
 		fmt.Println("mongo start success ...")
 		mongoClient.SetMode(mgo.Eventual, true)
