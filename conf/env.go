@@ -130,13 +130,8 @@ func mysqlFactory(host string) *sqlx.DB {
 	if err != nil {
 		loggerForError.LogError("mysql", fmt.Sprintf("%s connect error: %s", dns, err.Error()))
 		panic("mysql connect error: " + err.Error())
-	}
-
-	if err = db.Ping(); err != nil {
-		loggerForError.LogError("mysql", fmt.Sprintf("%s ping error: %s", dns, err.Error()))
-		panic("mysql connect error: " + err.Error())
 	} else {
-		fmt.Println(host + " mysql start success ...")
+		loggerForError.LogInfo("mysql", host + " mysql start success ...")
 	}
 
 	return db
